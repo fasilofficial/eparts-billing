@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { PageHeader } from "@/components/DashboardLayout";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { AlertTriangle, Minus, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/branch/inventory")({ component: BranchInventory });
@@ -11,12 +12,31 @@ function BranchInventory() {
   const mine = products.filter((p) => p.branchId === session?.branchId);
   const lowCount = mine.filter((p) => p.stock <= 5).length;
 
+  const exportRows = useMemo(
+    () =>
+      mine.map((p) => [
+        p.name,
+        p.sku,
+        p.category ?? "",
+        String(p.stock),
+        p.stock <= 5 ? "Yes" : "No",
+      ]),
+    [mine],
+  );
+
   return (
     <>
       <PageHeader
         eyebrow="Stock"
         title="Inventory"
         description="Adjust stock levels in real time."
+        actions={
+          <ExportExcelButton
+            filename="branch-inventory"
+            headers={["Product", "SKU", "Category", "Stock", "Low stock"]}
+            rows={exportRows}
+          />
+        }
       />
 
       {lowCount > 0 && (
@@ -44,6 +64,13 @@ function BranchInventory() {
                 onChange={(stock) => updateProduct(p.id, { stock })}
               />
             ))}
+            {mine.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  No products in inventory.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -70,6 +97,7 @@ function InventoryRow({
       <td className="px-5 py-3">
         <div className="mx-auto flex w-fit items-center gap-2">
           <button
+            type="button"
             onClick={() => set(Math.max(0, val - 1))}
             className="rounded-md border border-border p-1.5 hover:bg-accent"
           >
@@ -82,6 +110,7 @@ function InventoryRow({
             className="w-16 rounded-md border border-border bg-background px-2 py-1 text-center text-sm num"
           />
           <button
+            type="button"
             onClick={() => set(val + 1)}
             className="rounded-md border border-border p-1.5 hover:bg-accent"
           >

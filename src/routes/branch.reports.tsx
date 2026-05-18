@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useStore, fmtMoney, fmtDate, type Bill } from "@/lib/store";
 import { PageHeader, Stat } from "@/components/DashboardLayout";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { X, Printer } from "lucide-react";
 
@@ -29,12 +30,41 @@ function BranchReports() {
   const revenue = filtered.reduce((s, b) => s + b.total, 0);
   const avg = filtered.length ? revenue / filtered.length : 0;
 
+  const exportRows = useMemo(
+    () =>
+      filtered.map((b) => [
+        b.number,
+        b.customer ?? "",
+        fmtDate(b.createdAt),
+        String(b.items.reduce((s, i) => s + i.qty, 0)),
+        String(b.subtotal),
+        String(b.tax),
+        String(b.total),
+      ]),
+    [filtered],
+  );
+
   return (
     <>
       <PageHeader
         eyebrow="History"
         title="Bills & Reports"
         description="Your branch's billing history."
+        actions={
+          <ExportExcelButton
+            filename="branch-bills-report"
+            headers={[
+              "Invoice",
+              "Customer",
+              "Date",
+              "Items",
+              "Subtotal",
+              "Tax",
+              "Total",
+            ]}
+            rows={exportRows}
+          />
+        }
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">

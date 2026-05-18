@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, fmtMoney, fmtDate } from "@/lib/store";
 import { PageHeader, Stat } from "@/components/DashboardLayout";
+import { BranchLeaderboard } from "@/components/branch/BranchLeaderboard";
+import { ProductStockBarChart } from "@/components/charts/ProductStockBarChart";
 import { ArrowUpRight, ReceiptText } from "lucide-react";
 
 export const Route = createFileRoute("/branch/")({ component: BranchOverview });
@@ -40,6 +42,19 @@ function BranchOverview() {
         <Stat label="Total revenue" value={fmtMoney(totalRevenue)} hint="All-time" />
         <Stat label="Total bills" value={String(myBills.length)} />
         <Stat label="Low stock" value={String(lowStock)} hint="≤ 5 units" />
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <BranchLeaderboard currentBranchId={session?.branchId} />
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h2 className="font-display text-xl">Product stock</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Current quantity on hand for your catalog.
+          </p>
+          <div className="mt-4">
+            <ProductStockBarChart products={myProducts} />
+          </div>
+        </section>
       </div>
 
       <section className="responsive-table mt-12 rounded-xl border border-border bg-card">

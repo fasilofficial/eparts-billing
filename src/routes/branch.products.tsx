@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore, fmtMoney, type Product } from "@/lib/store";
 import { PageHeader } from "@/components/DashboardLayout";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import {
+  SortableTableHead,
+  type SortDirection,
+} from "@/components/admin/SortableTableHead";
 import { Plus, Trash2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/branch/products")({ component: BranchProducts });
+
+type SortKey = "stock" | "price";
 
 function BranchProducts() {
   const { session, products, addProduct, updateProduct, deleteProduct } = useStore();
@@ -13,11 +20,42 @@ function BranchProducts() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("stock");
+  const [sortDir, setSortDir] = useState<SortDirection>("desc");
 
-  const filtered = mine.filter(
-    (p) =>
-      p.name.toLowerCase().includes(query.toLowerCase()) ||
-      p.sku.toLowerCase().includes(query.toLowerCase()),
+  const filtered = useMemo(
+    () =>
+      mine.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query.toLowerCase()) ||
+          p.sku.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [mine, query],
+  );
+
+  const sorted = useMemo(() => {
+    const copy = [...filtered];
+    copy.sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return copy;
+  }, [filtered, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+
+  const exportRows = useMemo(
+    () =>
+      sorted.map((p) => [p.name, p.sku, String(p.stock), String(p.price), p.category ?? ""]),
+    [sorted],
   );
 
   return (
@@ -27,15 +65,23 @@ function BranchProducts() {
         title="Products"
         description="Manage the items you sell at this branch."
         actions={
-          <button
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
-          >
-            <Plus className="size-4" /> Add product
-          </button>
+          <>
+            <ExportExcelButton
+              filename="branch-products"
+              headers={["Product", "SKU", "Stock", "Price", "Category"]}
+              rows={exportRows}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setOpen(true);
+              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
+            >
+              <Plus className="size-4" /> Add product
+            </button>
+          </>
         }
       />
 
@@ -54,13 +100,25 @@ function BranchProducts() {
             <tr className="border-b border-border">
               <th className="px-5 py-3 text-left font-medium">Product</th>
               <th className="px-5 py-3 text-left font-medium">SKU</th>
-              <th className="px-5 py-3 text-right font-medium">Stock</th>
-              <th className="px-5 py-3 text-right font-medium">Price</th>
+              <SortableTableHead
+                label="Stock"
+                active={sortKey === "stock"}
+                direction={sortDir}
+                onClick={() => toggleSort("stock")}
+                className="text-right"
+              />
+              <SortableTableHead
+                label="Price"
+                active={sortKey === "price"}
+                direction={sortDir}
+                onClick={() => toggleSort("price")}
+                className="text-right"
+              />
               <th className="px-5 py-3" />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
+            {sorted.map((p) => (
               <tr
                 key={p.id}
                 className="group border-b border-border/60 transition hover:bg-muted/50"
@@ -76,6 +134,7 @@ function BranchProducts() {
                 <td className="px-5 py-3 text-right">
                   <div className="flex justify-end gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                     <button
+                      type="button"
                       onClick={() => {
                         setEditing(p);
                         setOpen(true);
@@ -87,6 +146,7 @@ function BranchProducts() {
                       <Pencil className="size-3.5" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         if (confirm("Delete?")) {
                           deleteProduct(p.id);
@@ -103,7 +163,7 @@ function BranchProducts() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
                   No products yet.
@@ -165,7 +225,7 @@ function ProductDialog({
             </div>
             <h2 className="font-display text-2xl">{initial ? "Edit product" : "Add product"}</h2>
           </div>
-          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-accent">
+          <button type="button" onClick={onClose} className="rounded-md p-1.5 hover:bg-accent">
             <X className="size-4" />
           </button>
         </div>

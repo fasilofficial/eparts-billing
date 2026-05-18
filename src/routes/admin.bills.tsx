@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useStore, fmtMoney, fmtDate, type Bill } from "@/lib/store";
 import { PageHeader, Stat } from "@/components/DashboardLayout";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { X, Printer } from "lucide-react";
 
 export const Route = createFileRoute("/admin/bills")({ component: AdminBills });
@@ -31,12 +32,44 @@ function AdminBills() {
   const totalRevenue = filtered.reduce((s, b) => s + b.total, 0);
   const avgTicket = filtered.length ? totalRevenue / filtered.length : 0;
 
+  const exportRows = useMemo(
+    () =>
+      filtered.map((b) => {
+        const br = branches.find((x) => x.id === b.branchId);
+        return [
+          b.number,
+          br?.name ?? "",
+          b.customer ?? "",
+          fmtDate(b.createdAt),
+          String(b.subtotal),
+          String(b.tax),
+          String(b.total),
+        ];
+      }),
+    [filtered, branches],
+  );
+
   return (
     <>
       <PageHeader
         eyebrow="Billing"
         title="Bills & Reports"
         description="Every invoice across the network."
+        actions={
+          <ExportExcelButton
+            filename="bills-report"
+            headers={[
+              "Invoice",
+              "Branch",
+              "Customer",
+              "Date",
+              "Subtotal",
+              "Tax",
+              "Total",
+            ]}
+            rows={exportRows}
+          />
+        }
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useStore, ADMIN_CREDS, BRANCH_DEMO_CREDS } from "@/lib/store";
 import { toast } from "sonner";
@@ -109,9 +110,17 @@ function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative mt-2 w-full overflow-hidden rounded-md bg-ink py-3 text-sm text-paper transition hover:opacity-90 disabled:opacity-60"
+              aria-busy={loading}
+              className="group relative mt-2 flex w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-ink py-3 text-sm text-paper transition hover:opacity-90 disabled:cursor-wait disabled:opacity-90"
             >
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                  <span>Signing in…</span>
+                </>
+              ) : (
+                "Sign in"
+              )}
             </button>
           </form>
 

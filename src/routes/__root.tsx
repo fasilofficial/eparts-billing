@@ -58,30 +58,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Ledger — Premium Billing for Multi-Branch Businesses" },
+      { title: "E Repair Innovative — Turning Tech Enthusiasts to Expert's" },
       {
         name: "description",
-        content: "A minimal, premium billing platform for multi-branch operations.",
+        content: "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
       },
-      { property: "og:title", content: "Ledger — Premium Billing for Multi-Branch Businesses" },
-      { name: "twitter:title", content: "Ledger — Premium Billing for Multi-Branch Businesses" },
+      { property: "og:title", content: "E Repair Innovative — Turning Tech Enthusiasts to Expert's" },
+      { name: "twitter:title", content: "E Repair Innovative — Turning Tech Enthusiasts to Expert's" },
       {
         property: "og:description",
-        content: "A minimal, premium billing platform for multi-branch operations.",
+        content: "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
       },
       {
         name: "twitter:description",
-        content: "A minimal, premium billing platform for multi-branch operations.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/cfd1ffdf-9d8a-4473-8d3f-cf5b60673e7b/id-preview-c93d2855--48380166-60c8-4df5-9b13-0ce56dfecc9b.lovable.app-1779099129433.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/cfd1ffdf-9d8a-4473-8d3f-cf5b60673e7b/id-preview-c93d2855--48380166-60c8-4df5-9b13-0ce56dfecc9b.lovable.app-1779099129433.png",
+        content: "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
       },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },

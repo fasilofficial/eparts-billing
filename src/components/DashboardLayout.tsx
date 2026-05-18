@@ -35,14 +35,14 @@ export function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-background pb-20 md:pb-0">
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar">
+    <div className="flex h-screen overflow-hidden bg-background">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar h-full">
         <div className="px-6 py-6">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="size-2 rounded-full bg-ink" />
-            <span className="tracking-widest uppercase">Ledger</span>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="E Repair Innovative" className="h-8 w-auto object-contain" />
           </div>
-          <div className="mt-6">
+          <div className="mt-1 text-[10px] font-bold uppercase tracking-widest leading-tight">E REPAIR INNOVATIVE</div>
+          <div className="mt-4">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
               {workspaceLabel}
             </div>
@@ -80,7 +80,7 @@ export function DashboardLayout({
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 h-full overflow-y-auto pb-20 md:pb-0">
         <div className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
           <button
             type="button"
@@ -121,11 +121,11 @@ export function DashboardLayout({
           <div className="relative flex h-full w-[min(22rem,88vw)] flex-col border-r border-border bg-sidebar shadow-paper">
             <div className="flex items-start justify-between px-5 py-5">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="size-2 rounded-full bg-ink" />
-                  <span className="tracking-widest uppercase">Ledger</span>
+                <div className="flex items-center gap-2">
+                  <img src="/logo.png" alt="E Repair Innovative" className="h-7 w-auto object-contain" />
                 </div>
-                <div className="mt-5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                <div className="mt-0.5 text-[10px] font-bold uppercase tracking-widest">E REPAIR INNOVATIVE</div>
+                <div className="mt-4 text-[10px] uppercase tracking-widest text-muted-foreground">
                   {workspaceLabel}
                 </div>
                 <div className="mt-1 truncate font-display text-2xl leading-tight">

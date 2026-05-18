@@ -339,7 +339,7 @@ export const ADMIN_CREDS = { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
 export const BRANCH_DEMO_CREDS = { email: DEMO_BRANCH_EMAIL, password: DEMO_BRANCH_PASSWORD };
 
 export const fmtMoney = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);
 
 export const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

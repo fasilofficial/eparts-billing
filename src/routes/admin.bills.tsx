@@ -51,6 +51,16 @@ function AdminBills() {
 
   return (
     <>
+      {/* Print-only wrapper: hidden on screen, shown during print */}
+      {viewing && (
+        <div className="print-only-wrapper">
+          <InvoiceDocument
+            bill={viewing}
+            branch={branches.find((b) => b.id === viewing.branchId)}
+          />
+        </div>
+      )}
+
       <PageHeader
         eyebrow="Billing"
         title="Bills & Reports"

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
-  head: () => ({ meta: [{ title: "Sign in — Ledger" }] }),
+  head: () => ({ meta: [{ title: "Sign in — E Repair Innovative" }] }),
 });
 
 function LoginPage() {
@@ -46,34 +46,38 @@ function LoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Left panel – visible on large screens */}
       <div className="hidden lg:flex flex-col justify-between border-r border-border bg-surface p-12">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="size-2 rounded-full bg-ink" />
-          <span className="tracking-widest uppercase">Ledger</span>
+        {/* Logo */}
+        <div>
+          <img src="/logo.png" alt="E Repair Innovative" className="h-24 w-auto object-contain" />
         </div>
+
+        {/* Hero copy */}
         <div>
           <h1 className="font-display text-6xl leading-[1.05]">
-            Billing,
+            Turning Tech
             <br />
-            <em className="italic text-muted-foreground">refined</em> across
+            <em className="italic text-muted-foreground">Enthusiasts</em>
             <br />
-            every branch.
+            to Experts.
           </h1>
           <p className="mt-6 max-w-md text-sm text-muted-foreground">
-            A quiet, premium workspace for multi-branch retail. Built for clarity, speed, and the
-            kind of print-ready invoices your customers keep.
+            Professional repair management &amp; billing — built for the team at ERepair Innovative.
           </p>
         </div>
+
         <div className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Ledger Studio
+          © {new Date().getFullYear()} E Repair Innovative · Thiruvananthapuram, Kerala
         </div>
       </div>
 
+      {/* Right panel – login form */}
       <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-8 flex items-center gap-2 text-sm">
-            <span className="size-2 rounded-full bg-ink" />
-            <span className="tracking-widest uppercase">Ledger</span>
+          {/* Mobile logo – shown only below lg breakpoint */}
+          <div className="lg:hidden mb-8">
+            <img src="/logo.png" alt="E Repair Innovative" className="h-16 w-auto object-contain" />
           </div>
           <h2 className="font-display text-3xl">Welcome back</h2>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to your workspace.</p>

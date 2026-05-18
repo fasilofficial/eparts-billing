@@ -170,22 +170,44 @@
 }
 
 /* Print styles for invoice */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  .print-area,
-  .print-area * {
-    visibility: visible;
-  }
-  .print-area {
-    position: absolute;
-    inset: 0;
-    background: white;
-    color: black;
-    padding: 48px;
-  }
-  .no-print {
+@media screen {
+  /* The print-only wrapper is invisible on screen */
+  .print-only-wrapper {
     display: none !important;
   }
 }
+
+@media print {
+  /*
+   * KEY FIX: Only blank the page when an invoice is actually open.
+   * :has() is supported in all modern browsers (Chrome 105+, Safari 15.4+, Firefox 121+).
+   * Without :has(), this fired on EVERY Cmd+P (Products, Inventory, etc.) → blank pages.
+   */
+  body:has(.print-only-wrapper) * {
+    visibility: hidden !important;
+  }
+
+  /* Reveal the invoice wrapper and all its children */
+  body:has(.print-only-wrapper) .print-only-wrapper,
+  body:has(.print-only-wrapper) .print-only-wrapper * {
+    visibility: visible !important;
+  }
+
+  /* Position invoice to fill the printed page */
+  .print-only-wrapper {
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: 99999 !important;
+  }
+
+  /* Always hide on-screen modal chrome regardless of context */
+  .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+

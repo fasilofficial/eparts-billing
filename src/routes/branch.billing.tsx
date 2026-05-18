@@ -72,6 +72,13 @@ function NewBill() {
 
   return (
     <>
+      {/* Print-only wrapper: hidden on screen, shown during print */}
+      {issued && (
+        <div className="print-only-wrapper">
+          <InvoiceDocument bill={issued} branch={branch} />
+        </div>
+      )}
+
       <PageHeader
         eyebrow="Point of sale"
         title="New bill"
@@ -199,6 +206,7 @@ function NewBill() {
         </aside>
       </div>
 
+      {/* Screen modal – hidden during print via no-print */}
       {issued && (
         <div
           className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm no-print"

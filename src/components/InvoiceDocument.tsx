@@ -1,26 +1,60 @@
+import logoUrl from "/logo.png";
 import { fmtDate, fmtMoney, type Bill, type Branch } from "@/lib/store";
+
+const COMPANY_NAME = "E REPAIR INNOVATIVE";
+const COMPANY_ADDRESS = [
+  "ERepair Innovative",
+  "Shalom Building LIC Junction,",
+  "Pattom, Thiruvananthapuram,",
+  "Kerala. Pin 695004",
+];
 
 export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch }) {
   return (
     <div className="mx-auto w-full max-w-2xl bg-white text-black border border-border print-area">
       <div className="p-5 sm:p-10">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-neutral-500">Ledger</div>
-            <div className="font-display text-3xl mt-1">Invoice</div>
+        {/* Header: Logo + company info left, invoice meta right */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img
+              src={logoUrl}
+              alt="E Repair Innovative Logo"
+              className="h-14 w-auto object-contain"
+              style={{ maxWidth: 80 }}
+            />
+            <div>
+              <div className="font-bold text-sm leading-tight tracking-wide uppercase">
+                {COMPANY_NAME}
+              </div>
+              <div className="mt-0.5 text-[10px] text-neutral-500 leading-snug">
+                {COMPANY_ADDRESS.map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="text-right text-xs">
-            <div className="font-medium">{bill.number}</div>
-            <div className="text-neutral-500">{fmtDate(bill.createdAt)}</div>
+
+          <div className="text-right shrink-0">
+            <div className="text-xs uppercase tracking-widest text-neutral-500">Invoice</div>
+            <div className="font-semibold text-sm mt-0.5">{bill.number}</div>
+            <div className="text-[11px] text-neutral-500 mt-0.5">{fmtDate(bill.createdAt)}</div>
           </div>
         </div>
 
-        <div className="mt-10 grid gap-6 text-xs sm:grid-cols-2">
+        {/* Divider */}
+        <div className="my-6 border-t border-neutral-200" />
+
+        {/* From / Billed to */}
+        <div className="grid gap-6 text-xs sm:grid-cols-2">
           <div>
             <div className="uppercase tracking-widest text-neutral-500">From</div>
-            <div className="mt-1.5 font-medium">{branch?.name ?? "Branch"}</div>
-            <div className="text-neutral-600">{branch?.address ?? "—"}</div>
-            <div className="text-neutral-600">{branch?.email}</div>
+            <div className="mt-1.5 font-medium">{branch?.name ?? COMPANY_NAME}</div>
+            <div className="text-neutral-600 whitespace-pre-line">
+              {branch?.address ?? COMPANY_ADDRESS.join("\n")}
+            </div>
+            {branch?.email && (
+              <div className="text-neutral-600">{branch.email}</div>
+            )}
           </div>
           <div>
             <div className="uppercase tracking-widest text-neutral-500">Billed to</div>
@@ -29,7 +63,8 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
           </div>
         </div>
 
-        <div className="responsive-table mt-10">
+        {/* Items table */}
+        <div className="responsive-table mt-8">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-widest text-neutral-500">
@@ -52,6 +87,7 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
           </table>
         </div>
 
+        {/* Totals */}
         <div className="mt-6 ml-auto w-full max-w-64 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-neutral-500">Subtotal</span>
@@ -67,8 +103,14 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
           </div>
         </div>
 
-        <div className="mt-12 border-t border-neutral-200 pt-4 text-[10px] uppercase tracking-widest text-neutral-500">
-          Thank you for your business · {bill.number}
+        {/* Footer */}
+        <div className="mt-10 border-t border-neutral-200 pt-4 text-[10px] text-neutral-500">
+          <div className="uppercase tracking-widest">
+            Thank you for your business · {bill.number}
+          </div>
+          <div className="mt-1">
+            {COMPANY_NAME} &nbsp;|&nbsp; {COMPANY_ADDRESS.slice(1).join(", ")}
+          </div>
         </div>
       </div>
     </div>

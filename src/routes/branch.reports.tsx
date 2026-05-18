@@ -35,13 +35,13 @@ function BranchReports() {
         <Stat label="Avg ticket" value={fmtMoney(avg)} />
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-3 rounded-xl border border-border bg-card p-4">
+      <div className="mb-4 grid gap-3 rounded-xl border border-border bg-card p-4 sm:flex sm:flex-wrap">
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
-        <div className="ml-auto self-center text-xs text-muted-foreground">Tap any row to preview & print</div>
+        <div className="self-center text-xs text-muted-foreground sm:ml-auto">Tap any row to preview & print</div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">

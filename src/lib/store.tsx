@@ -71,6 +71,12 @@ const ADMIN_PASSWORD = "admin123";
 const KEY = "billing-store-v1";
 const SESSION_KEY = "billing-session-v1";
 
+const persistSession = (nextSession: Session | null) => {
+  if (typeof window === "undefined") return;
+  if (nextSession) localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
+  else localStorage.removeItem(SESSION_KEY);
+};
+
 const seed = (): StoreState => {
   const b1 = { id: "br_1", name: "Downtown Flagship", email: "downtown@billing.app", password: "branch123", address: "12 Market Street", createdAt: new Date().toISOString() };
   const b2 = { id: "br_2", name: "Northgate Branch", email: "northgate@billing.app", password: "branch123", address: "88 North Ave", createdAt: new Date().toISOString() };
@@ -156,17 +162,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     session,
     login: (email, password) => {
       if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        setSession({ role: "admin", email });
+        const nextSession: Session = { role: "admin", email };
+        persistSession(nextSession);
+        setSession(nextSession);
         return { ok: true };
       }
       const b = state.branches.find((x) => x.email === email && x.password === password);
       if (b) {
-        setSession({ role: "branch", branchId: b.id, email });
+        const nextSession: Session = { role: "branch", branchId: b.id, email };
+        persistSession(nextSession);
+        setSession(nextSession);
         return { ok: true };
       }
       return { ok: false, error: "Invalid credentials" };
     },
-    logout: () => setSession(null),
+    logout: () => {
+      persistSession(null);
+      setSession(null);
+    },
     addBranch: (b) =>
       setState((s) => ({
         ...s,

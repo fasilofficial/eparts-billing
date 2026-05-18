@@ -22,7 +22,7 @@ function BranchOverview() {
         title="Your workspace."
         description="Quiet command for your shop floor."
         actions={
-          <Link to="/branch/billing" className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90">
+          <Link to="/branch/billing" className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto">
             <ReceiptText className="size-4" /> New bill
           </Link>
         }
@@ -35,7 +35,7 @@ function BranchOverview() {
         <Stat label="Low stock" value={String(lowStock)} hint="≤ 5 units" />
       </div>
 
-      <section className="mt-12 rounded-xl border border-border bg-card">
+      <section className="responsive-table mt-12 rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-display text-xl">Recent bills</h2>
           <Link to="/branch/reports" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">

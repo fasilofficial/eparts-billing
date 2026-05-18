@@ -21,7 +21,7 @@ function AdminBranches() {
         actions={
           <button
             onClick={() => { setEditing(null); setOpen(true); }}
-            className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
           >
             <Plus className="size-4" /> New branch
           </button>
@@ -39,11 +39,21 @@ function AdminBranches() {
                   <div className="font-display text-2xl leading-tight">{b.name}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{b.email}</div>
                 </div>
-                <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
-                  <button onClick={() => { setEditing(b); setOpen(true); }} className="rounded-md p-1.5 hover:bg-accent">
+                <div className="flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                  <button
+                    onClick={() => { setEditing(b); setOpen(true); }}
+                    className="rounded-md p-1.5 hover:bg-accent"
+                    aria-label={`Edit ${b.name}`}
+                    title="Edit branch"
+                  >
                     <Pencil className="size-3.5" />
                   </button>
-                  <button onClick={() => { if (confirm("Delete this branch?")) { deleteBranch(b.id); toast.success("Branch removed"); } }} className="rounded-md p-1.5 text-destructive hover:bg-accent">
+                  <button
+                    onClick={() => { if (confirm("Delete this branch?")) { deleteBranch(b.id); toast.success("Branch removed"); } }}
+                    className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                    aria-label={`Delete ${b.name}`}
+                    title="Delete branch"
+                  >
                     <Trash2 className="size-3.5" />
                   </button>
                 </div>
@@ -58,7 +68,7 @@ function AdminBranches() {
                   <div className="text-muted-foreground">Bills</div>
                 </div>
                 <div>
-                  <div className="text-lg">{fmtDate(b.createdAt)}</div>
+                  <div className="text-sm sm:text-lg">{fmtDate(b.createdAt)}</div>
                   <div className="text-muted-foreground">Created</div>
                 </div>
               </div>
@@ -95,7 +105,7 @@ function BranchDialog({ initial, onClose, onSave }: { initial: Branch | null; on
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-paper" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-paper" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-start justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{initial ? "Edit" : "New"}</div>

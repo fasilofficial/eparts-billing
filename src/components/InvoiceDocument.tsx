@@ -3,7 +3,7 @@ import { fmtDate, fmtMoney, type Bill, type Branch } from "@/lib/store";
 export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch }) {
   return (
     <div className="mx-auto w-full max-w-2xl bg-white text-black border border-border print-area">
-      <div className="p-10">
+      <div className="p-5 sm:p-10">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs uppercase tracking-widest text-neutral-500">Ledger</div>
@@ -15,7 +15,7 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-2 gap-6 text-xs">
+        <div className="mt-10 grid gap-6 text-xs sm:grid-cols-2">
           <div>
             <div className="uppercase tracking-widest text-neutral-500">From</div>
             <div className="mt-1.5 font-medium">{branch?.name ?? "Branch"}</div>
@@ -29,28 +29,30 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
           </div>
         </div>
 
-        <table className="mt-10 w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-widest text-neutral-500">
-              <th className="py-2 font-medium">Item</th>
-              <th className="py-2 font-medium text-right">Qty</th>
-              <th className="py-2 font-medium text-right">Price</th>
-              <th className="py-2 font-medium text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bill.items.map((it, i) => (
-              <tr key={i} className="border-b border-neutral-100">
-                <td className="py-3">{it.name}</td>
-                <td className="py-3 text-right num">{it.qty}</td>
-                <td className="py-3 text-right num">{fmtMoney(it.price)}</td>
-                <td className="py-3 text-right num">{fmtMoney(it.price * it.qty)}</td>
+        <div className="responsive-table mt-10">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-widest text-neutral-500">
+                <th className="py-2 font-medium">Item</th>
+                <th className="py-2 font-medium text-right">Qty</th>
+                <th className="py-2 font-medium text-right">Price</th>
+                <th className="py-2 font-medium text-right">Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {bill.items.map((it, i) => (
+                <tr key={i} className="border-b border-neutral-100">
+                  <td className="py-3">{it.name}</td>
+                  <td className="py-3 text-right num">{it.qty}</td>
+                  <td className="py-3 text-right num">{fmtMoney(it.price)}</td>
+                  <td className="py-3 text-right num">{fmtMoney(it.price * it.qty)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-        <div className="mt-6 ml-auto w-64 space-y-2 text-sm">
+        <div className="mt-6 ml-auto w-full max-w-64 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-neutral-500">Subtotal</span>
             <span className="num">{fmtMoney(bill.subtotal)}</span>

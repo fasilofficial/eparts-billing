@@ -41,7 +41,7 @@ function AdminBills() {
         <Stat label="Avg ticket" value={fmtMoney(avgTicket)} />
       </div>
 
-      <div className="mb-4 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-5">
+      <div className="mb-4 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-5">
         <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm">
           <option value="all">All branches</option>
           {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -52,7 +52,7 @@ function AdminBills() {
         <input type="number" placeholder="Max $" value={maxAmt} onChange={(e) => setMaxAmt(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">

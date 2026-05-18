@@ -24,7 +24,7 @@ function AdminProducts() {
     <>
       <PageHeader eyebrow="Catalog" title="All products" description="Every SKU across every branch." />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
+      <div className="mb-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
         <input
           placeholder="Search products or SKU…"
           value={query}
@@ -39,10 +39,10 @@ function AdminProducts() {
           <option value="all">All branches</option>
           {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
-        <div className="ml-auto text-xs text-muted-foreground">{filtered.length} items</div>
+        <div className="text-xs text-muted-foreground sm:ml-auto">{filtered.length} items</div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">

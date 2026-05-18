@@ -89,7 +89,7 @@ function NewBill() {
                     <div className="truncate font-medium">{p.name}</div>
                     <div className="text-xs text-muted-foreground num">{p.sku} · {p.stock} in stock</div>
                   </div>
-                  <div className="num text-sm">{fmtMoney(p.price)}</div>
+                  <div className="shrink-0 num text-sm">{fmtMoney(p.price)}</div>
                 </button>
               </li>
             ))}
@@ -116,8 +116,8 @@ function NewBill() {
               <div className="px-5 py-16 text-center text-sm text-muted-foreground">Add items to begin.</div>
             )}
             {items.map((it) => (
-              <div key={it.productId} className="flex items-center gap-3 border-b border-border/60 px-5 py-3">
-                <div className="min-w-0 flex-1">
+              <div key={it.productId} className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3 sm:flex-nowrap sm:px-5">
+                <div className="min-w-0 flex-1 basis-full sm:basis-0">
                   <div className="truncate text-sm font-medium">{it.name}</div>
                   <div className="text-xs text-muted-foreground num">{fmtMoney(it.price)}</div>
                 </div>
@@ -126,7 +126,7 @@ function NewBill() {
                   <input type="number" value={it.qty} onChange={(e) => setQty(it.productId, +e.target.value || 0)} className="w-12 rounded-md border border-border bg-background px-1 py-0.5 text-center text-sm num" />
                   <button onClick={() => setQty(it.productId, it.qty + 1)} className="rounded-md border border-border p-1 hover:bg-accent"><Plus className="size-3" /></button>
                 </div>
-                <div className="w-16 text-right text-sm num">{fmtMoney(it.price * it.qty)}</div>
+                <div className="ml-auto w-20 text-right text-sm num sm:ml-0 sm:w-16">{fmtMoney(it.price * it.qty)}</div>
                 <button onClick={() => setQty(it.productId, 0)} className="rounded-md p-1 text-muted-foreground hover:text-destructive">
                   <Trash2 className="size-3.5" />
                 </button>
@@ -139,7 +139,7 @@ function NewBill() {
             <Row label="Tax (5%)" value={fmtMoney(tax)} />
             <div className="flex items-baseline justify-between border-t border-border pt-3">
               <span className="text-xs uppercase tracking-widest text-muted-foreground">Total</span>
-              <span className="font-display text-3xl num">{fmtMoney(total)}</span>
+              <span className="font-display text-2xl num sm:text-3xl">{fmtMoney(total)}</span>
             </div>
             <button
               onClick={issue}

@@ -34,7 +34,7 @@ function AdminOverview() {
       </div>
 
       <div className="mt-12 grid gap-6 lg:grid-cols-3">
-        <section className="lg:col-span-2 rounded-xl border border-border bg-card">
+        <section className="responsive-table lg:col-span-2 rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="font-display text-xl">Recent bills</h2>
             <Link to="/admin/bills" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">

@@ -23,7 +23,7 @@ function BranchProducts() {
         title="Products"
         description="Manage the items you sell at this branch."
         actions={
-          <button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90">
+          <button onClick={() => { setEditing(null); setOpen(true); }} className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto">
             <Plus className="size-4" /> Add product
           </button>
         }
@@ -38,7 +38,7 @@ function BranchProducts() {
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
@@ -57,11 +57,21 @@ function BranchProducts() {
                 <td className={`px-5 py-3 text-right num ${p.stock <= 5 ? "text-destructive" : ""}`}>{p.stock}</td>
                 <td className="px-5 py-3 text-right num">{fmtMoney(p.price)}</td>
                 <td className="px-5 py-3 text-right">
-                  <div className="flex justify-end gap-1 opacity-0 transition group-hover:opacity-100">
-                    <button onClick={() => { setEditing(p); setOpen(true); }} className="rounded-md p-1.5 hover:bg-accent">
+                  <div className="flex justify-end gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                    <button
+                      onClick={() => { setEditing(p); setOpen(true); }}
+                      className="rounded-md p-1.5 hover:bg-accent"
+                      aria-label={`Edit ${p.name}`}
+                      title="Edit product"
+                    >
                       <Pencil className="size-3.5" />
                     </button>
-                    <button onClick={() => { if (confirm("Delete?")) { deleteProduct(p.id); toast.success("Removed"); } }} className="rounded-md p-1.5 text-destructive hover:bg-accent">
+                    <button
+                      onClick={() => { if (confirm("Delete?")) { deleteProduct(p.id); toast.success("Removed"); } }}
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                      aria-label={`Delete ${p.name}`}
+                      title="Delete product"
+                    >
                       <Trash2 className="size-3.5" />
                     </button>
                   </div>
@@ -99,7 +109,7 @@ function ProductDialog({ initial, onClose, onSave }: { initial: Product | null; 
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-paper" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-paper" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-start justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{initial ? "Edit" : "New"}</div>

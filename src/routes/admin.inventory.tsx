@@ -10,7 +10,11 @@ function AdminInventory() {
 
   return (
     <>
-      <PageHeader eyebrow="Stock" title="Inventory" description="Branch-by-branch view with low-stock signals." />
+      <PageHeader
+        eyebrow="Stock"
+        title="Inventory"
+        description="Branch-by-branch view with low-stock signals."
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {branches.map((b) => {
@@ -40,10 +44,15 @@ function AdminInventory() {
                           <div className="truncate text-sm font-medium">{p.name}</div>
                           <div className="text-xs text-muted-foreground num">{p.sku}</div>
                         </div>
-                        <div className={`text-sm num ${low ? "text-destructive" : ""}`}>{p.stock} <span className="text-muted-foreground text-xs">in stock</span></div>
+                        <div className={`text-sm num ${low ? "text-destructive" : ""}`}>
+                          {p.stock} <span className="text-muted-foreground text-xs">in stock</span>
+                        </div>
                       </div>
                       <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface">
-                        <div className={`h-full ${low ? "bg-destructive" : "bg-ink"}`} style={{ width: `${pct}%` }} />
+                        <div
+                          className={`h-full ${low ? "bg-destructive" : "bg-ink"}`}
+                          style={{ width: `${pct}%` }}
+                        />
                       </div>
                     </li>
                   );

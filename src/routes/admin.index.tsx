@@ -11,14 +11,22 @@ function AdminOverview() {
   const { branches, products, bills } = useStore();
   const totalRevenue = bills.reduce((s, b) => s + b.total, 0);
   const today = new Date().toDateString();
-  const todayRevenue = bills.filter((b) => new Date(b.createdAt).toDateString() === today).reduce((s, b) => s + b.total, 0);
+  const todayRevenue = bills
+    .filter((b) => new Date(b.createdAt).toDateString() === today)
+    .reduce((s, b) => s + b.total, 0);
   const weekStart = Date.now() - 7 * 86400000;
-  const weekRevenue = bills.filter((b) => new Date(b.createdAt).getTime() >= weekStart).reduce((s, b) => s + b.total, 0);
+  const weekRevenue = bills
+    .filter((b) => new Date(b.createdAt).getTime() >= weekStart)
+    .reduce((s, b) => s + b.total, 0);
   const lowStock = products.filter((p) => p.stock <= 5).length;
 
   return (
     <>
-      <PageHeader eyebrow="Headquarters" title="Good day." description="A glance at every branch, every bill, in one place." />
+      <PageHeader
+        eyebrow="Headquarters"
+        title="Good day."
+        description="A glance at every branch, every bill, in one place."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Total revenue" value={fmtMoney(totalRevenue)} hint="All branches" />
@@ -37,7 +45,10 @@ function AdminOverview() {
         <section className="responsive-table lg:col-span-2 rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="font-display text-xl">Recent bills</h2>
-            <Link to="/admin/bills" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+            <Link
+              to="/admin/bills"
+              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            >
               View all <ArrowUpRight className="size-3" />
             </Link>
           </div>
@@ -70,16 +81,23 @@ function AdminOverview() {
           <h2 className="font-display text-xl">Branches</h2>
           <ul className="mt-4 space-y-3">
             {branches.map((b) => {
-              const branchRevenue = bills.filter((x) => x.branchId === b.id).reduce((s, x) => s + x.total, 0);
+              const branchRevenue = bills
+                .filter((x) => x.branchId === b.id)
+                .reduce((s, x) => s + x.total, 0);
               return (
-                <li key={b.id} className="flex items-center justify-between gap-3 border-b border-border/60 pb-3 last:border-0">
+                <li
+                  key={b.id}
+                  className="flex items-center justify-between gap-3 border-b border-border/60 pb-3 last:border-0"
+                >
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{b.name}</div>
                     <div className="truncate text-xs text-muted-foreground">{b.email}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm num">{fmtMoney(branchRevenue)}</div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Revenue</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Revenue
+                    </div>
                   </div>
                 </li>
               );

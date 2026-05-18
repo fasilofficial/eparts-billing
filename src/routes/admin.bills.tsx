@@ -33,7 +33,11 @@ function AdminBills() {
 
   return (
     <>
-      <PageHeader eyebrow="Billing" title="Bills & Reports" description="Every invoice across the network." />
+      <PageHeader
+        eyebrow="Billing"
+        title="Bills & Reports"
+        description="Every invoice across the network."
+      />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Bills" value={String(filtered.length)} />
@@ -42,14 +46,44 @@ function AdminBills() {
       </div>
 
       <div className="mb-4 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-5">
-        <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+        <select
+          value={branchFilter}
+          onChange={(e) => setBranchFilter(e.target.value)}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        >
           <option value="all">All branches</option>
-          {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
         </select>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
-        <input type="number" placeholder="Min $" value={minAmt} onChange={(e) => setMinAmt(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
-        <input type="number" placeholder="Max $" value={maxAmt} onChange={(e) => setMaxAmt(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
+        <input
+          type="date"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        />
+        <input
+          type="date"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        />
+        <input
+          type="number"
+          placeholder="Min $"
+          value={minAmt}
+          onChange={(e) => setMinAmt(e.target.value)}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        />
+        <input
+          type="number"
+          placeholder="Max $"
+          value={maxAmt}
+          onChange={(e) => setMaxAmt(e.target.value)}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        />
       </div>
 
       <div className="responsive-table rounded-xl border border-border bg-card">
@@ -67,7 +101,11 @@ function AdminBills() {
             {filtered.map((b) => {
               const br = branches.find((x) => x.id === b.branchId);
               return (
-                <tr key={b.id} className="cursor-pointer border-b border-border/60 transition hover:bg-muted/50" onClick={() => setViewing(b)}>
+                <tr
+                  key={b.id}
+                  className="cursor-pointer border-b border-border/60 transition hover:bg-muted/50"
+                  onClick={() => setViewing(b)}
+                >
                   <td className="px-5 py-3 font-medium">{b.number}</td>
                   <td className="px-5 py-3 text-muted-foreground">{br?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-muted-foreground">{b.customer ?? "—"}</td>
@@ -77,22 +115,40 @@ function AdminBills() {
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">No bills match these filters.</td></tr>
+              <tr>
+                <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  No bills match these filters.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
 
       {viewing && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm no-print" onClick={() => setViewing(null)}>
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm no-print"
+          onClick={() => setViewing(null)}
+        >
           <div className="mx-auto my-8 max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex justify-between text-paper">
-              <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90"
+              >
                 <Printer className="size-4" /> Print
               </button>
-              <button onClick={() => setViewing(null)} className="rounded-md bg-paper p-1.5 text-ink"><X className="size-4" /></button>
+              <button
+                onClick={() => setViewing(null)}
+                className="rounded-md bg-paper p-1.5 text-ink"
+              >
+                <X className="size-4" />
+              </button>
             </div>
-            <InvoiceDocument bill={viewing} branch={branches.find((b) => b.id === viewing.branchId)} />
+            <InvoiceDocument
+              bill={viewing}
+              branch={branches.find((b) => b.id === viewing.branchId)}
+            />
           </div>
         </div>
       )}

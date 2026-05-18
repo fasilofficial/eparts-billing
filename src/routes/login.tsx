@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useStore, ADMIN_CREDS } from "@/lib/store";
+import { useStore, ADMIN_CREDS, BRANCH_DEMO_CREDS } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -15,29 +15,34 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const signInWith = (nextEmail: string, nextPassword: string) => {
     setLoading(true);
-    setTimeout(() => {
-      const res = login(email.trim(), password);
-      setLoading(false);
-      if (!res.ok) {
-        toast.error(res.error ?? "Login failed");
-        return;
+    window.setTimeout(() => {
+      try {
+        const trimmedEmail = nextEmail.trim();
+        const res = login(trimmedEmail, nextPassword);
+        if (!res.ok) {
+          toast.error(res.error ?? "Login failed");
+          return;
+        }
+        nav({ to: trimmedEmail === ADMIN_CREDS.email ? "/admin" : "/branch" });
+      } catch {
+        toast.error("Could not sign in. Please try again.");
+      } finally {
+        setLoading(false);
       }
-      const isAdmin = email.trim() === ADMIN_CREDS.email;
-      nav({ to: isAdmin ? "/admin" : "/branch" });
-    }, 400);
+    }, 250);
   };
 
-  const useDemo = (kind: "admin" | "branch") => {
-    if (kind === "admin") {
-      setEmail(ADMIN_CREDS.email);
-      setPassword(ADMIN_CREDS.password);
-    } else {
-      setEmail("downtown@billing.app");
-      setPassword("branch123");
-    }
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    signInWith(email, password);
+  };
+
+  const fillDemoCredentials = (kind: "admin" | "branch") => {
+    const creds = kind === "admin" ? ADMIN_CREDS : BRANCH_DEMO_CREDS;
+    setEmail(creds.email);
+    setPassword(creds.password);
   };
 
   return (
@@ -49,16 +54,20 @@ function LoginPage() {
         </div>
         <div>
           <h1 className="font-display text-6xl leading-[1.05]">
-            Billing,<br />
-            <em className="italic text-muted-foreground">refined</em> across<br />
+            Billing,
+            <br />
+            <em className="italic text-muted-foreground">refined</em> across
+            <br />
             every branch.
           </h1>
           <p className="mt-6 max-w-md text-sm text-muted-foreground">
-            A quiet, premium workspace for multi-branch retail. Built for clarity,
-            speed, and the kind of print-ready invoices your customers keep.
+            A quiet, premium workspace for multi-branch retail. Built for clarity, speed, and the
+            kind of print-ready invoices your customers keep.
           </p>
         </div>
-        <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} Ledger Studio</div>
+        <div className="text-xs text-muted-foreground">
+          © {new Date().getFullYear()} Ledger Studio
+        </div>
       </div>
 
       <div className="flex items-center justify-center p-6 sm:p-12">
@@ -72,7 +81,9 @@ function LoginPage() {
 
           <form onSubmit={submit} className="mt-8 space-y-5">
             <div>
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Email</label>
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">
+                Email
+              </label>
               <input
                 type="email"
                 required
@@ -84,7 +95,9 @@ function LoginPage() {
               />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wider text-muted-foreground">Password</label>
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">
+                Password
+              </label>
               <input
                 type="password"
                 required
@@ -107,15 +120,26 @@ function LoginPage() {
           <div className="mt-10 border-t border-border pt-6">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Demo access</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button onClick={() => useDemo("admin")} className="rounded-md border border-border px-3 py-2 text-xs hover:bg-accent">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => fillDemoCredentials("admin")}
+                className="rounded-md border border-border px-3 py-2 text-xs transition hover:bg-accent disabled:opacity-50"
+              >
                 Admin
               </button>
-              <button onClick={() => useDemo("branch")} className="rounded-md border border-border px-3 py-2 text-xs hover:bg-accent">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => fillDemoCredentials("branch")}
+                className="rounded-md border border-border px-3 py-2 text-xs transition hover:bg-accent disabled:opacity-50"
+              >
                 Branch user
               </button>
             </div>
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Admin · admin@billing.app / admin123<br />
+              Admin · admin@billing.app / admin123
+              <br />
               Branch · downtown@billing.app / branch123
             </p>
           </div>

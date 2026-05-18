@@ -43,7 +43,9 @@ export function DashboardLayout({
             <span className="tracking-widest uppercase">Ledger</span>
           </div>
           <div className="mt-6">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{workspaceLabel}</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              {workspaceLabel}
+            </div>
             <div className="mt-1 font-display text-xl leading-tight">{workspaceName}</div>
           </div>
         </div>
@@ -89,7 +91,9 @@ export function DashboardLayout({
             <Menu className="size-4" />
           </button>
           <div className="min-w-0 text-center">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{workspaceLabel}</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              {workspaceLabel}
+            </div>
             <div className="truncate text-sm font-medium">{workspaceName}</div>
           </div>
           <button
@@ -101,7 +105,9 @@ export function DashboardLayout({
             <LogOut className="size-4" />
           </button>
         </div>
-        <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10 md:px-10 md:py-12">{children}</div>
+        <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10 md:px-10 md:py-12">
+          {children}
+        </div>
       </main>
 
       {mobileNavOpen && (
@@ -119,8 +125,12 @@ export function DashboardLayout({
                   <span className="size-2 rounded-full bg-ink" />
                   <span className="tracking-widest uppercase">Ledger</span>
                 </div>
-                <div className="mt-5 text-[10px] uppercase tracking-widest text-muted-foreground">{workspaceLabel}</div>
-                <div className="mt-1 truncate font-display text-2xl leading-tight">{workspaceName}</div>
+                <div className="mt-5 text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {workspaceLabel}
+                </div>
+                <div className="mt-1 truncate font-display text-2xl leading-tight">
+                  {workspaceName}
+                </div>
               </div>
               <button
                 type="button"
@@ -166,7 +176,10 @@ export function DashboardLayout({
       )}
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-2 backdrop-blur md:hidden">
-        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        <div
+          className="grid gap-1"
+          style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+        >
           {items.map((it) => {
             const Icon = it.icon;
             const active = isActive(it.to);
@@ -176,7 +189,9 @@ export function DashboardLayout({
                 to={it.to}
                 title={it.label}
                 className={`flex min-w-0 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-[10px] leading-none transition ${
-                  active ? "bg-ink text-paper" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  active
+                    ? "bg-ink text-paper"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 }`}
               >
                 <Icon className="size-4 shrink-0" />
@@ -190,13 +205,31 @@ export function DashboardLayout({
   );
 }
 
-export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title: string; description?: string; actions?: ReactNode }) {
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  actions,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
   return (
     <div className="mb-8 flex flex-col items-start justify-between gap-4 border-b border-border pb-5 sm:mb-10 sm:flex-row sm:items-end sm:pb-6">
       <div className="min-w-0">
-        {eyebrow && <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{eyebrow}</div>}
-        <h1 className="mt-1 break-words font-display text-3xl leading-tight sm:text-4xl md:text-5xl">{title}</h1>
-        {description && <p className="mt-2 max-w-xl text-sm text-muted-foreground">{description}</p>}
+        {eyebrow && (
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+            {eyebrow}
+          </div>
+        )}
+        <h1 className="mt-1 break-words font-display text-3xl leading-tight sm:text-4xl md:text-5xl">
+          {title}
+        </h1>
+        {description && (
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">{description}</p>
+        )}
       </div>
       {actions && <div className="flex w-full gap-2 sm:w-auto">{actions}</div>}
     </div>

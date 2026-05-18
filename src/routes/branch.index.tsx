@@ -22,14 +22,21 @@ function BranchOverview() {
         title="Your workspace."
         description="Quiet command for your shop floor."
         actions={
-          <Link to="/branch/billing" className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto">
+          <Link
+            to="/branch/billing"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
+          >
             <ReceiptText className="size-4" /> New bill
           </Link>
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Today's sales" value={fmtMoney(todayRevenue)} hint={`${todayBills.length} bills`} />
+        <Stat
+          label="Today's sales"
+          value={fmtMoney(todayRevenue)}
+          hint={`${todayBills.length} bills`}
+        />
         <Stat label="Total revenue" value={fmtMoney(totalRevenue)} hint="All-time" />
         <Stat label="Total bills" value={String(myBills.length)} />
         <Stat label="Low stock" value={String(lowStock)} hint="≤ 5 units" />
@@ -38,7 +45,10 @@ function BranchOverview() {
       <section className="responsive-table mt-12 rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-display text-xl">Recent bills</h2>
-          <Link to="/branch/reports" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <Link
+            to="/branch/reports"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
             View all <ArrowUpRight className="size-3" />
           </Link>
         </div>
@@ -61,7 +71,11 @@ function BranchOverview() {
               </tr>
             ))}
             {myBills.length === 0 && (
-              <tr><td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">No bills yet. Create your first.</td></tr>
+              <tr>
+                <td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  No bills yet. Create your first.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

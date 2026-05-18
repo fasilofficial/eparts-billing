@@ -19,7 +19,15 @@ function NewBill() {
   const [issued, setIssued] = useState<Bill | null>(null);
 
   const filtered = useMemo(
-    () => mine.filter((p) => query === "" || p.name.toLowerCase().includes(query.toLowerCase()) || p.sku.toLowerCase().includes(query.toLowerCase())).slice(0, 8),
+    () =>
+      mine
+        .filter(
+          (p) =>
+            query === "" ||
+            p.name.toLowerCase().includes(query.toLowerCase()) ||
+            p.sku.toLowerCase().includes(query.toLowerCase()),
+        )
+        .slice(0, 8),
     [mine, query],
   );
 
@@ -32,18 +40,22 @@ function NewBill() {
     if (!p) return;
     setItems((prev) => {
       const existing = prev.find((i) => i.productId === productId);
-      if (existing) return prev.map((i) => i.productId === productId ? { ...i, qty: i.qty + 1 } : i);
+      if (existing)
+        return prev.map((i) => (i.productId === productId ? { ...i, qty: i.qty + 1 } : i));
       return [...prev, { productId, name: p.name, price: p.price, qty: 1 }];
     });
   };
 
   const setQty = (id: string, qty: number) => {
     if (qty <= 0) setItems((prev) => prev.filter((i) => i.productId !== id));
-    else setItems((prev) => prev.map((i) => i.productId === id ? { ...i, qty } : i));
+    else setItems((prev) => prev.map((i) => (i.productId === id ? { ...i, qty } : i)));
   };
 
   const issue = () => {
-    if (items.length === 0) { toast.error("Add at least one item"); return; }
+    if (items.length === 0) {
+      toast.error("Add at least one item");
+      return;
+    }
     const bill = addBill({
       branchId: session!.branchId!,
       customer: customer || "Walk-in",
@@ -60,7 +72,11 @@ function NewBill() {
 
   return (
     <>
-      <PageHeader eyebrow="Point of sale" title="New bill" description="Fast, distraction-free billing." />
+      <PageHeader
+        eyebrow="Point of sale"
+        title="New bill"
+        description="Fast, distraction-free billing."
+      />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
         {/* Left: product picker */}
@@ -87,14 +103,18 @@ function NewBill() {
                 >
                   <div className="min-w-0">
                     <div className="truncate font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground num">{p.sku} · {p.stock} in stock</div>
+                    <div className="text-xs text-muted-foreground num">
+                      {p.sku} · {p.stock} in stock
+                    </div>
                   </div>
                   <div className="shrink-0 num text-sm">{fmtMoney(p.price)}</div>
                 </button>
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-5 py-10 text-center text-sm text-muted-foreground">No products found.</li>
+              <li className="px-5 py-10 text-center text-sm text-muted-foreground">
+                No products found.
+              </li>
             )}
           </ul>
         </div>
@@ -102,7 +122,9 @@ function NewBill() {
         {/* Right: cart */}
         <aside className="rounded-xl border border-border bg-card">
           <div className="border-b border-border p-4">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Current bill</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Current bill
+            </div>
             <input
               placeholder="Customer name (optional)"
               value={customer}
@@ -113,21 +135,46 @@ function NewBill() {
 
           <div className="max-h-[50vh] overflow-y-auto">
             {items.length === 0 && (
-              <div className="px-5 py-16 text-center text-sm text-muted-foreground">Add items to begin.</div>
+              <div className="px-5 py-16 text-center text-sm text-muted-foreground">
+                Add items to begin.
+              </div>
             )}
             {items.map((it) => (
-              <div key={it.productId} className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3 sm:flex-nowrap sm:px-5">
+              <div
+                key={it.productId}
+                className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3 sm:flex-nowrap sm:px-5"
+              >
                 <div className="min-w-0 flex-1 basis-full sm:basis-0">
                   <div className="truncate text-sm font-medium">{it.name}</div>
                   <div className="text-xs text-muted-foreground num">{fmtMoney(it.price)}</div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button onClick={() => setQty(it.productId, it.qty - 1)} className="rounded-md border border-border p-1 hover:bg-accent"><Minus className="size-3" /></button>
-                  <input type="number" value={it.qty} onChange={(e) => setQty(it.productId, +e.target.value || 0)} className="w-12 rounded-md border border-border bg-background px-1 py-0.5 text-center text-sm num" />
-                  <button onClick={() => setQty(it.productId, it.qty + 1)} className="rounded-md border border-border p-1 hover:bg-accent"><Plus className="size-3" /></button>
+                  <button
+                    onClick={() => setQty(it.productId, it.qty - 1)}
+                    className="rounded-md border border-border p-1 hover:bg-accent"
+                  >
+                    <Minus className="size-3" />
+                  </button>
+                  <input
+                    type="number"
+                    value={it.qty}
+                    onChange={(e) => setQty(it.productId, +e.target.value || 0)}
+                    className="w-12 rounded-md border border-border bg-background px-1 py-0.5 text-center text-sm num"
+                  />
+                  <button
+                    onClick={() => setQty(it.productId, it.qty + 1)}
+                    className="rounded-md border border-border p-1 hover:bg-accent"
+                  >
+                    <Plus className="size-3" />
+                  </button>
                 </div>
-                <div className="ml-auto w-20 text-right text-sm num sm:ml-0 sm:w-16">{fmtMoney(it.price * it.qty)}</div>
-                <button onClick={() => setQty(it.productId, 0)} className="rounded-md p-1 text-muted-foreground hover:text-destructive">
+                <div className="ml-auto w-20 text-right text-sm num sm:ml-0 sm:w-16">
+                  {fmtMoney(it.price * it.qty)}
+                </div>
+                <button
+                  onClick={() => setQty(it.productId, 0)}
+                  className="rounded-md p-1 text-muted-foreground hover:text-destructive"
+                >
                   <Trash2 className="size-3.5" />
                 </button>
               </div>
@@ -153,13 +200,24 @@ function NewBill() {
       </div>
 
       {issued && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm no-print" onClick={() => setIssued(null)}>
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm no-print"
+          onClick={() => setIssued(null)}
+        >
           <div className="mx-auto my-8 max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex justify-between">
-              <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90"
+              >
                 <Printer className="size-4" /> Print
               </button>
-              <button onClick={() => setIssued(null)} className="rounded-md bg-paper p-1.5 text-ink"><X className="size-4" /></button>
+              <button
+                onClick={() => setIssued(null)}
+                className="rounded-md bg-paper p-1.5 text-ink"
+              >
+                <X className="size-4" />
+              </button>
             </div>
             <InvoiceDocument bill={issued} branch={branch} />
           </div>

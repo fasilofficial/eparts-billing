@@ -13,7 +13,11 @@ function BranchInventory() {
 
   return (
     <>
-      <PageHeader eyebrow="Stock" title="Inventory" description="Adjust stock levels in real time." />
+      <PageHeader
+        eyebrow="Stock"
+        title="Inventory"
+        description="Adjust stock levels in real time."
+      />
 
       {lowCount > 0 && (
         <div className="mb-6 flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
@@ -34,7 +38,11 @@ function BranchInventory() {
           </thead>
           <tbody>
             {mine.map((p) => (
-              <InventoryRow key={p.id} product={p} onChange={(stock) => updateProduct(p.id, { stock })} />
+              <InventoryRow
+                key={p.id}
+                product={p}
+                onChange={(stock) => updateProduct(p.id, { stock })}
+              />
             ))}
           </tbody>
         </table>
@@ -43,18 +51,42 @@ function BranchInventory() {
   );
 }
 
-function InventoryRow({ product, onChange }: { product: { id: string; name: string; sku: string; stock: number }; onChange: (n: number) => void }) {
+function InventoryRow({
+  product,
+  onChange,
+}: {
+  product: { id: string; name: string; sku: string; stock: number };
+  onChange: (n: number) => void;
+}) {
   const [val, setVal] = useState(product.stock);
-  const set = (n: number) => { setVal(n); onChange(n); };
+  const set = (n: number) => {
+    setVal(n);
+    onChange(n);
+  };
   return (
     <tr className="border-b border-border/60">
       <td className="px-5 py-3 font-medium">{product.name}</td>
       <td className="px-5 py-3 text-muted-foreground num">{product.sku}</td>
       <td className="px-5 py-3">
         <div className="mx-auto flex w-fit items-center gap-2">
-          <button onClick={() => set(Math.max(0, val - 1))} className="rounded-md border border-border p-1.5 hover:bg-accent"><Minus className="size-3" /></button>
-          <input type="number" value={val} onChange={(e) => set(+e.target.value || 0)} className="w-16 rounded-md border border-border bg-background px-2 py-1 text-center text-sm num" />
-          <button onClick={() => set(val + 1)} className="rounded-md border border-border p-1.5 hover:bg-accent"><Plus className="size-3" /></button>
+          <button
+            onClick={() => set(Math.max(0, val - 1))}
+            className="rounded-md border border-border p-1.5 hover:bg-accent"
+          >
+            <Minus className="size-3" />
+          </button>
+          <input
+            type="number"
+            value={val}
+            onChange={(e) => set(+e.target.value || 0)}
+            className="w-16 rounded-md border border-border bg-background px-2 py-1 text-center text-sm num"
+          />
+          <button
+            onClick={() => set(val + 1)}
+            className="rounded-md border border-border p-1.5 hover:bg-accent"
+          >
+            <Plus className="size-3" />
+          </button>
         </div>
       </td>
       <td className={`px-5 py-3 text-right num ${val <= 5 ? "text-destructive" : ""}`}>{val}</td>

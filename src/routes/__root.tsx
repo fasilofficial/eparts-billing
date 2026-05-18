@@ -12,6 +12,8 @@ import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 
+const isSpaBuild = import.meta.env.VITE_SPA_BUILD === "true";
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -84,9 +86,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+  // Vite injects CSS in index.html for SPA builds; only SSR needs this link.
+  links: isSpaBuild ? [] : [{ rel: "stylesheet", href: appCss }],
   }),
-  shellComponent: RootShell,
+  ...(isSpaBuild ? {} : { shellComponent: RootShell }),
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
@@ -111,6 +114,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
+        {isSpaBuild ? <HeadContent /> : null}
         <Outlet />
         <Toaster />
       </StoreProvider>

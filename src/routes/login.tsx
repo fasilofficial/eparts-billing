@@ -15,23 +15,21 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const signInWith = (nextEmail: string, nextPassword: string) => {
+  const signInWith = async (nextEmail: string, nextPassword: string) => {
     setLoading(true);
-    window.setTimeout(() => {
-      try {
-        const trimmedEmail = nextEmail.trim();
-        const res = login(trimmedEmail, nextPassword);
-        if (!res.ok) {
-          toast.error(res.error ?? "Login failed");
-          return;
-        }
-        nav({ to: trimmedEmail === ADMIN_CREDS.email ? "/admin" : "/branch" });
-      } catch {
-        toast.error("Could not sign in. Please try again.");
-      } finally {
-        setLoading(false);
+    try {
+      const trimmedEmail = nextEmail.trim();
+      const res = login(trimmedEmail, nextPassword);
+      if (!res.ok) {
+        toast.error(res.error ?? "Login failed");
+        return;
       }
-    }, 250);
+      await nav({ to: trimmedEmail === ADMIN_CREDS.email ? "/admin" : "/branch" });
+    } catch {
+      toast.error("Could not sign in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submit = (e: React.FormEvent) => {

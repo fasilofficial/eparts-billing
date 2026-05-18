@@ -38,10 +38,7 @@ export function DashboardLayout({
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar h-full">
         <div className="px-6 py-6">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="E Repair Innovative" className="h-8 w-auto object-contain" />
-          </div>
-          <div className="mt-1 text-[10px] font-bold uppercase tracking-widest leading-tight">E REPAIR INNOVATIVE</div>
+          <div className="font-bold text-sm uppercase tracking-widest leading-tight">E Repair Innovative</div>
           <div className="mt-4">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
               {workspaceLabel}
@@ -121,10 +118,7 @@ export function DashboardLayout({
           <div className="relative flex h-full w-[min(22rem,88vw)] flex-col border-r border-border bg-sidebar shadow-paper">
             <div className="flex items-start justify-between px-5 py-5">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <img src="/logo.png" alt="E Repair Innovative" className="h-7 w-auto object-contain" />
-                </div>
-                <div className="mt-0.5 text-[10px] font-bold uppercase tracking-widest">E REPAIR INNOVATIVE</div>
+                <div className="font-bold text-sm uppercase tracking-widest leading-tight">E Repair Innovative</div>
                 <div className="mt-4 text-[10px] uppercase tracking-widest text-muted-foreground">
                   {workspaceLabel}
                 </div>

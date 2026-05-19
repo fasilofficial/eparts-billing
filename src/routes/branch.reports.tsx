@@ -35,6 +35,7 @@ function BranchReports() {
       filtered.map((b) => [
         b.number,
         b.customer ?? "",
+        b.paymentMethod ?? "Cash",
         fmtDate(b.createdAt),
         String(b.items.reduce((s, i) => s + i.qty, 0)),
         String(b.subtotal),
@@ -52,10 +53,11 @@ function BranchReports() {
         description="Your branch's billing history."
         actions={
           <ExportExcelButton
-            filename="branch-bills-report"
+            filename={`branch-bills-report-${new Date().toISOString().split('T')[0]}`}
             headers={[
               "Invoice",
               "Customer",
+              "Payment",
               "Date",
               "Items",
               "Subtotal",
@@ -97,6 +99,7 @@ function BranchReports() {
             <tr className="border-b border-border">
               <th className="px-5 py-3 text-left font-medium">Invoice</th>
               <th className="px-5 py-3 text-left font-medium">Customer</th>
+              <th className="px-5 py-3 text-left font-medium">Payment</th>
               <th className="px-5 py-3 text-left font-medium">Date</th>
               <th className="px-5 py-3 text-right font-medium">Items</th>
               <th className="px-5 py-3 text-right font-medium">Total</th>
@@ -111,6 +114,7 @@ function BranchReports() {
               >
                 <td className="px-5 py-3 font-medium">{b.number}</td>
                 <td className="px-5 py-3 text-muted-foreground">{b.customer ?? "—"}</td>
+                <td className="px-5 py-3 text-muted-foreground">{b.paymentMethod ?? "Cash"}</td>
                 <td className="px-5 py-3 text-muted-foreground">{fmtDate(b.createdAt)}</td>
                 <td className="px-5 py-3 text-right num">
                   {b.items.reduce((s, i) => s + i.qty, 0)}
@@ -137,7 +141,14 @@ function BranchReports() {
           <div className="mx-auto my-8 max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex justify-between">
               <button
-                onClick={() => window.print()}
+                onClick={() => {
+                  const oldTitle = document.title;
+                  const safeCustomer = (viewing.customer || "Walk-in").replace(/[^a-z0-9]/gi, '_');
+                  const dateStr = new Date(viewing.createdAt).toISOString().split('T')[0];
+                  document.title = `${viewing.number}_${safeCustomer}_${dateStr}`;
+                  window.print();
+                  setTimeout(() => { document.title = oldTitle; }, 100);
+                }}
                 className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90"
               >
                 <Printer className="size-4" /> Print

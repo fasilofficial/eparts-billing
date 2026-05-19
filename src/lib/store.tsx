@@ -158,7 +158,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .select("*")
         .eq("email", email)
         .eq("password", password)
-        .single();
+        .maybeSingle();
+        
+      if (error) {
+        console.error("Supabase login error:", error);
+      }
         
       if (branch) {
         const nextSession: Session = { role: "branch", branchId: branch.id, email };
@@ -172,20 +176,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSession(null);
     },
     addBranch: async (b) => {
-      await supabase.from("branches").insert([b]);
+      const { error } = await supabase.from("branches").insert([b]);
+      if (error) throw new Error(error.message);
       await refreshData();
     },
     updateBranch: async (id, patch) => {
-      await supabase.from("branches").update(patch).eq("id", id);
+      const { error } = await supabase.from("branches").update(patch).eq("id", id);
+      if (error) throw new Error(error.message);
       await refreshData();
     },
     deleteBranch: async (id) => {
-      await supabase.from("branches").delete().eq("id", id);
+      const { error } = await supabase.from("branches").delete().eq("id", id);
+      if (error) throw new Error(error.message);
       await refreshData();
     },
     addProduct: async (p) => {
       const { branchId, ...rest } = p;
-      await supabase.from("products").insert([{ ...rest, branch_id: branchId }]);
+      const { error } = await supabase.from("products").insert([{ ...rest, branch_id: branchId }]);
+      if (error) throw new Error(error.message);
       await refreshData();
     },
     updateProduct: async (id, patch) => {
@@ -194,11 +202,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         dbPatch.branch_id = patch.branchId;
         delete dbPatch.branchId;
       }
-      await supabase.from("products").update(dbPatch).eq("id", id);
+      const { error } = await supabase.from("products").update(dbPatch).eq("id", id);
+      if (error) throw new Error(error.message);
       await refreshData();
     },
     deleteProduct: async (id) => {
-      await supabase.from("products").delete().eq("id", id);
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) throw new Error(error.message);
       await refreshData();
     },
     addBill: async (b) => {
@@ -211,6 +221,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .select()
         .single();
         
+      if (error) throw new Error(error.message);
+        
       if (newBill && items.length > 0) {
         const billItems = items.map(item => ({
           bill_id: newBill.id,
@@ -219,19 +231,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           price: item.price,
           qty: item.qty
         }));
-        await supabase.from("bill_items").insert(billItems);
+        const { error: itemsError } = await supabase.from("bill_items").insert(billItems);
+        if (itemsError) throw new Error(itemsError.message);
         
         // Decrement stock for each item
         for (const item of items) {
           const product = state.products.find(p => p.id === item.productId);
           if (product) {
-            await supabase.from("products").update({ stock: product.stock - item.qty }).eq("id", item.productId);
+            const { error: stockError } = await supabase.from("products").update({ stock: product.stock - item.qty }).eq("id", item.productId);
+            if (stockError) console.error("Stock update failed", stockError);
           }
         }
       }
       
       await refreshData();
-      return newBill as any; // The state mapping handles proper typing in refreshData
+      return {
+        ...newBill,
+        branchId: newBill.branch_id,
+        createdAt: newBill.created_at,
+        items
+      } as any;
     },
   };
 

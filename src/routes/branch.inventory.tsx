@@ -61,7 +61,13 @@ function BranchInventory() {
               <InventoryRow
                 key={p.id}
                 product={p}
-                onChange={(stock) => updateProduct(p.id, { stock })}
+                onChange={async (stock) => {
+                  try {
+                    await updateProduct(p.id, { stock });
+                  } catch (e: any) {
+                    import("sonner").then((mod) => mod.toast.error(e.message || "Failed to update stock"));
+                  }
+                }}
               />
             ))}
             {mine.length === 0 && (

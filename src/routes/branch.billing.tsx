@@ -51,12 +51,12 @@ function NewBill() {
     else setItems((prev) => prev.map((i) => (i.productId === id ? { ...i, qty } : i)));
   };
 
-  const issue = () => {
+  const issue = async () => {
     if (items.length === 0) {
       toast.error("Add at least one item");
       return;
     }
-    const bill = addBill({
+    const bill = await addBill({
       branchId: session!.branchId!,
       customer: customer || "Walk-in",
       items,
@@ -64,10 +64,14 @@ function NewBill() {
       tax,
       total,
     });
-    setIssued(bill);
-    setItems([]);
-    setCustomer("");
-    toast.success(`Bill ${bill.number} created`);
+    if (bill) {
+      setIssued(bill);
+      setItems([]);
+      setCustomer("");
+      toast.success(`Bill ${bill.number} created`);
+    } else {
+      toast.error("Failed to create bill");
+    }
   };
 
   return (

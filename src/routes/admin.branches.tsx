@@ -58,10 +58,14 @@ function AdminBranches() {
                     <Pencil className="size-3.5" />
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (confirm("Delete this branch?")) {
-                        deleteBranch(b.id);
-                        toast.success("Branch removed");
+                        try {
+                          await deleteBranch(b.id);
+                          toast.success("Branch removed");
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to delete branch");
+                        }
                       }
                     }}
                     className="rounded-md p-1.5 text-destructive hover:bg-accent"
@@ -95,15 +99,19 @@ function AdminBranches() {
         <BranchDialog
           initial={editing}
           onClose={() => setOpen(false)}
-          onSave={(data) => {
-            if (editing) {
-              updateBranch(editing.id, data);
-              toast.success("Branch updated");
-            } else {
-              addBranch(data);
-              toast.success("Branch created");
+          onSave={async (data) => {
+            try {
+              if (editing) {
+                await updateBranch(editing.id, data);
+                toast.success("Branch updated");
+              } else {
+                await addBranch(data);
+                toast.success("Branch created");
+              }
+              setOpen(false);
+            } catch (e: any) {
+              toast.error(e.message || "Operation failed");
             }
-            setOpen(false);
           }}
         />
       )}

@@ -20,7 +20,7 @@ function LoginPage() {
     setLoading(true);
     try {
       const trimmedEmail = nextEmail.trim();
-      const res = login(trimmedEmail, nextPassword);
+      const res = await login(trimmedEmail, nextPassword);
       if (!res.ok) {
         toast.error(res.error ?? "Login failed");
         return;

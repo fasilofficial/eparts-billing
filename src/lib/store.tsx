@@ -69,8 +69,8 @@ interface StoreCtx extends StoreState {
   refresh: () => Promise<void>;
 }
 
-const ADMIN_EMAIL = "admin@billing.app";
-const ADMIN_PASSWORD = "admin123";
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 
 const SESSION_KEY = "billing-session-v2";
 
@@ -264,7 +264,7 @@ export const useStore = () => {
 };
 
 export const ADMIN_CREDS = { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
-export const BRANCH_DEMO_CREDS = { email: "downtown@billing.app", password: "branch123" };
+
 
 export const fmtMoney = (n: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useStore, ADMIN_CREDS, BRANCH_DEMO_CREDS } from "@/lib/store";
+import { useStore, ADMIN_CREDS } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -38,11 +38,6 @@ function LoginPage() {
     signInWith(email, password);
   };
 
-  const fillDemoCredentials = (kind: "admin" | "branch") => {
-    const creds = kind === "admin" ? ADMIN_CREDS : BRANCH_DEMO_CREDS;
-    setEmail(creds.email);
-    setPassword(creds.password);
-  };
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -128,32 +123,6 @@ function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-10 border-t border-border pt-6">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Demo access</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => fillDemoCredentials("admin")}
-                className="rounded-md border border-border px-3 py-2 text-xs transition hover:bg-accent disabled:opacity-50"
-              >
-                Admin
-              </button>
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => fillDemoCredentials("branch")}
-                className="rounded-md border border-border px-3 py-2 text-xs transition hover:bg-accent disabled:opacity-50"
-              >
-                Branch user
-              </button>
-            </div>
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              Admin · admin@billing.app / admin123
-              <br />
-              Branch · downtown@billing.app / branch123
-            </p>
-          </div>
         </div>
       </div>
     </div>

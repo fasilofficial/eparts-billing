@@ -36,6 +36,7 @@ export interface Bill {
   number: string;
   branchId: string;
   customer?: string;
+  paymentMethod: string;
   subtotal: number;
   tax: number;
   total: number;
@@ -110,6 +111,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const mappedBills: Bill[] = (billsRes.data || []).map((b: any) => ({
         ...b,
         branchId: b.branch_id,
+        paymentMethod: b.payment_method || "Cash",
         createdAt: b.created_at,
         items: (b.items || []).map((i: any) => ({
           ...i,
@@ -213,11 +215,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     addBill: async (b) => {
       const number = `INV-${1000 + state.bills.length + 1}`;
-      const { items, branchId, ...billData } = b;
+      const { items, branchId, paymentMethod, ...billData } = b;
       
       const { data: newBill, error } = await supabase
         .from("bills")
-        .insert([{ ...billData, branch_id: branchId, number }])
+        .insert([{ ...billData, payment_method: paymentMethod, branch_id: branchId, number }])
         .select()
         .single();
         
@@ -248,6 +250,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return {
         ...newBill,
         branchId: newBill.branch_id,
+        paymentMethod: newBill.payment_method || b.paymentMethod,
         createdAt: newBill.created_at,
         items
       } as any;
@@ -267,7 +270,10 @@ export const ADMIN_CREDS = { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
 
 
 export const fmtMoney = (n: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(n);
+  new Intl.NumberFormat(import.meta.env.VITE_LOCALE || "en-IN", { 
+    style: "currency", 
+    currency: import.meta.env.VITE_CURRENCY || "INR" 
+  }).format(n);
 
 export const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

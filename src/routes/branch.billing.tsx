@@ -16,6 +16,8 @@ function NewBill() {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<BillItem[]>([]);
   const [customer, setCustomer] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [taxPercent, setTaxPercent] = useState(5);
   const [issued, setIssued] = useState<Bill | null>(null);
 
   const filtered = useMemo(
@@ -32,7 +34,7 @@ function NewBill() {
   );
 
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
-  const tax = +(subtotal * 0.05).toFixed(2);
+  const tax = +(subtotal * (taxPercent / 100)).toFixed(2);
   const total = +(subtotal + tax).toFixed(2);
 
   const addItem = (productId: string) => {
@@ -51,23 +53,28 @@ function NewBill() {
     else setItems((prev) => prev.map((i) => (i.productId === id ? { ...i, qty } : i)));
   };
 
-  const issue = () => {
+  const issue = async () => {
     if (items.length === 0) {
       toast.error("Add at least one item");
       return;
     }
-    const bill = addBill({
+    const bill = await addBill({
       branchId: session!.branchId!,
       customer: customer || "Walk-in",
+      paymentMethod,
       items,
       subtotal,
       tax,
       total,
     });
-    setIssued(bill);
-    setItems([]);
-    setCustomer("");
-    toast.success(`Bill ${bill.number} created`);
+    if (bill) {
+      setIssued(bill);
+      setItems([]);
+      setCustomer("");
+      toast.success(`Bill ${bill.number} created`);
+    } else {
+      toast.error("Failed to create bill");
+    }
   };
 
   return (
@@ -138,6 +145,15 @@ function NewBill() {
               onChange={(e) => setCustomer(e.target.value)}
               className="mt-2 w-full border-b border-border bg-transparent py-1.5 text-sm outline-none focus:border-ink"
             />
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="mt-3 w-full rounded-md border border-border bg-transparent py-2 px-2 text-sm outline-none focus:border-ink"
+            >
+              {(import.meta.env.VITE_PAYMENT_METHODS || "Cash,Card,UPI").split(",").map(pm => (
+                <option key={pm} value={pm.trim()}>{pm.trim()}</option>
+              ))}
+            </select>
           </div>
 
           <div className="max-h-[50vh] overflow-y-auto">
@@ -190,7 +206,21 @@ function NewBill() {
 
           <div className="space-y-2 border-t border-border p-5 text-sm">
             <Row label="Subtotal" value={fmtMoney(subtotal)} />
-            <Row label="Tax (5%)" value={fmtMoney(tax)} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span>Tax</span>
+                <input
+                  type="number"
+                  value={taxPercent}
+                  onChange={(e) => setTaxPercent(+e.target.value || 0)}
+                  className="w-16 rounded-md border border-border bg-background px-2 py-0.5 text-center text-xs num outline-none focus:border-ink"
+                  min="0"
+                  max="100"
+                />
+                <span>%</span>
+              </div>
+              <span className="num">{fmtMoney(tax)}</span>
+            </div>
             <div className="flex items-baseline justify-between border-t border-border pt-3">
               <span className="text-xs uppercase tracking-widest text-muted-foreground">Total</span>
               <span className="font-display text-2xl num sm:text-3xl">{fmtMoney(total)}</span>

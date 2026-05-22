@@ -14,7 +14,7 @@ export const Route = createFileRoute("/admin")({
   beforeLoad: () => {
     if (typeof window === "undefined") return;
     try {
-      const raw = localStorage.getItem("billing-session-v1");
+      const raw = localStorage.getItem("billing-session-v2");
       if (!raw) throw redirect({ to: "/login" });
       const s = JSON.parse(raw);
       if (s.role !== "admin") throw redirect({ to: "/branch" });

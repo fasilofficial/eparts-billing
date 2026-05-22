@@ -1,15 +1,12 @@
 import logoUrl from "/logo.png";
 import { fmtDate, fmtMoney, type Bill, type Branch } from "@/lib/store";
 
-const COMPANY_NAME = "E REPAIR INNOVATIVE";
-const COMPANY_ADDRESS = [
-  "ERepair Innovative",
-  "Shalom Building LIC Junction,",
-  "Pattom, Thiruvananthapuram,",
-  "Kerala. Pin 695004",
-];
+const COMPANY_NAME = import.meta.env.VITE_COMPANY_NAME || "E REPAIR INNOVATIVE";
+const COMPANY_ADDRESS = (import.meta.env.VITE_COMPANY_ADDRESS || "ERepair Innovative|Shalom Building LIC Junction,|Pattom, Thiruvananthapuram,|Kerala. Pin 695004").split("|");
+const PAYMENT_METHODS = import.meta.env.VITE_PAYMENT_METHODS || "Cash / Card";
 
 export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch }) {
+  const taxPercent = bill.subtotal > 0 ? Math.round((bill.tax / bill.subtotal) * 100) : 0;
   return (
     <div className="mx-auto w-full max-w-2xl bg-white text-black border border-border print-area">
       <div className="p-5 sm:p-10">
@@ -59,7 +56,7 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
           <div>
             <div className="uppercase tracking-widest text-neutral-500">Billed to</div>
             <div className="mt-1.5 font-medium">{bill.customer || "Walk-in customer"}</div>
-            <div className="text-neutral-600">Cash / Card</div>
+            <div className="text-neutral-600">{bill.paymentMethod}</div>
           </div>
         </div>
 
@@ -94,7 +91,7 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
             <span className="num">{fmtMoney(bill.subtotal)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-neutral-500">Tax (5%)</span>
+            <span className="text-neutral-500">Tax ({taxPercent}%)</span>
             <span className="num">{fmtMoney(bill.tax)}</span>
           </div>
           <div className="flex justify-between border-t border-neutral-200 pt-2 font-display text-xl">

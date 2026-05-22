@@ -40,6 +40,7 @@ function AdminBills() {
           b.number,
           br?.name ?? "",
           b.customer ?? "",
+          b.paymentMethod ?? "Cash",
           fmtDate(b.createdAt),
           String(b.subtotal),
           String(b.tax),
@@ -67,11 +68,12 @@ function AdminBills() {
         description="Every invoice across the network."
         actions={
           <ExportExcelButton
-            filename="bills-report"
+            filename={`bills-report-${new Date().toISOString().split('T')[0]}`}
             headers={[
               "Invoice",
               "Branch",
               "Customer",
+              "Payment",
               "Date",
               "Subtotal",
               "Tax",
@@ -136,6 +138,7 @@ function AdminBills() {
               <th className="px-5 py-3 text-left font-medium">Invoice</th>
               <th className="px-5 py-3 text-left font-medium">Branch</th>
               <th className="px-5 py-3 text-left font-medium">Customer</th>
+              <th className="px-5 py-3 text-left font-medium">Payment</th>
               <th className="px-5 py-3 text-left font-medium">Date</th>
               <th className="px-5 py-3 text-right font-medium">Total</th>
             </tr>
@@ -152,6 +155,7 @@ function AdminBills() {
                   <td className="px-5 py-3 font-medium">{b.number}</td>
                   <td className="px-5 py-3 text-muted-foreground">{br?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-muted-foreground">{b.customer ?? "—"}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{b.paymentMethod ?? "Cash"}</td>
                   <td className="px-5 py-3 text-muted-foreground">{fmtDate(b.createdAt)}</td>
                   <td className="px-5 py-3 text-right num">{fmtMoney(b.total)}</td>
                 </tr>
@@ -176,7 +180,14 @@ function AdminBills() {
           <div className="mx-auto my-8 max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex justify-between text-paper">
               <button
-                onClick={() => window.print()}
+                onClick={() => {
+                  const oldTitle = document.title;
+                  const safeCustomer = (viewing.customer || "Walk-in").replace(/[^a-z0-9]/gi, '_');
+                  const dateStr = new Date(viewing.createdAt).toISOString().split('T')[0];
+                  document.title = `${viewing.number}_${safeCustomer}_${dateStr}`;
+                  window.print();
+                  setTimeout(() => { document.title = oldTitle; }, 100);
+                }}
                 className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90"
               >
                 <Printer className="size-4" /> Print

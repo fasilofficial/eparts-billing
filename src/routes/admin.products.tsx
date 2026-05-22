@@ -191,10 +191,14 @@ function AdminProducts() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           if (confirm(`Delete ${p.name}?`)) {
-                            deleteProduct(p.id);
-                            toast.success("Product removed");
+                            try {
+                              await deleteProduct(p.id);
+                              toast.success("Product removed");
+                            } catch (e: any) {
+                              toast.error(e.message || "Failed to delete");
+                            }
                           }
                         }}
                         className="rounded-md p-1.5 text-destructive hover:bg-accent"
@@ -223,15 +227,19 @@ function AdminProducts() {
           initial={editing}
           branches={branches}
           onClose={closeDialog}
-          onSave={(data) => {
-            if (editing) {
-              updateProduct(editing.id, data);
-              toast.success("Product updated");
-            } else {
-              addProduct(data);
-              toast.success("Product added");
+          onSave={async (data) => {
+            try {
+              if (editing) {
+                await updateProduct(editing.id, data);
+                toast.success("Product updated");
+              } else {
+                await addProduct(data);
+                toast.success("Product added");
+              }
+              closeDialog();
+            } catch (e: any) {
+              toast.error(e.message || "Operation failed");
             }
-            closeDialog();
           }}
         />
       )}

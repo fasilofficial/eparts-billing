@@ -147,10 +147,14 @@ function BranchProducts() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (confirm("Delete?")) {
-                          deleteProduct(p.id);
-                          toast.success("Removed");
+                          try {
+                            await deleteProduct(p.id);
+                            toast.success("Removed");
+                          } catch (e: any) {
+                            toast.error(e.message || "Failed to delete");
+                          }
                         }
                       }}
                       className="rounded-md p-1.5 text-destructive hover:bg-accent"
@@ -178,15 +182,19 @@ function BranchProducts() {
         <ProductDialog
           initial={editing}
           onClose={() => setOpen(false)}
-          onSave={(data) => {
-            if (editing) {
-              updateProduct(editing.id, data);
-              toast.success("Updated");
-            } else {
-              addProduct({ ...data, branchId: session!.branchId! });
-              toast.success("Added");
+          onSave={async (data) => {
+            try {
+              if (editing) {
+                await updateProduct(editing.id, data);
+                toast.success("Updated");
+              } else {
+                await addProduct({ ...data, branchId: session!.branchId! });
+                toast.success("Added");
+              }
+              setOpen(false);
+            } catch (e: any) {
+              toast.error(e.message || "Operation failed");
             }
-            setOpen(false);
           }}
         />
       )}

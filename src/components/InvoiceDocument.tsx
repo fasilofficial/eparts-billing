@@ -24,7 +24,7 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
                 {COMPANY_NAME}
               </div>
               <div className="mt-0.5 text-[10px] text-neutral-500 leading-snug">
-                {COMPANY_ADDRESS.map((line, i) => (
+                {COMPANY_ADDRESS.map((line: string, i: number) => (
                   <div key={i}>{line}</div>
                 ))}
               </div>

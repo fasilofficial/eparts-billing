@@ -1,12 +1,15 @@
 import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { DashboardLayout, type NavItem } from "@/components/DashboardLayout";
-import { LayoutDashboard, Building2, Package, Boxes, Receipt } from "lucide-react";
+import { LayoutDashboard, Building2, Package, Boxes, Receipt, ReceiptText, Users, Wrench } from "lucide-react";
 
 const items: NavItem[] = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard },
   { to: "/admin/branches", label: "Branches", icon: Building2 },
+  { to: "/admin/customers", label: "Customers", icon: Users },
+  { to: "/admin/repairs", label: "Repairs", icon: Wrench },
   { to: "/admin/products", label: "Products", icon: Package },
   { to: "/admin/inventory", label: "Inventory", icon: Boxes },
+  { to: "/admin/billing", label: "New bill", icon: ReceiptText },
   { to: "/admin/bills", label: "Billing & Reports", icon: Receipt },
 ];
 

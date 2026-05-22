@@ -16,13 +16,18 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BranchIndexRouteImport } from './routes/branch.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as BranchReportsRouteImport } from './routes/branch.reports'
+import { Route as BranchRepairsRouteImport } from './routes/branch.repairs'
 import { Route as BranchProductsRouteImport } from './routes/branch.products'
 import { Route as BranchInventoryRouteImport } from './routes/branch.inventory'
+import { Route as BranchCustomersRouteImport } from './routes/branch.customers'
 import { Route as BranchBillingRouteImport } from './routes/branch.billing'
+import { Route as AdminRepairsRouteImport } from './routes/admin.repairs'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminInventoryRouteImport } from './routes/admin.inventory'
+import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminBranchesRouteImport } from './routes/admin.branches'
 import { Route as AdminBillsRouteImport } from './routes/admin.bills'
+import { Route as AdminBillingRouteImport } from './routes/admin.billing'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -59,6 +64,11 @@ const BranchReportsRoute = BranchReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => BranchRoute,
 } as any)
+const BranchRepairsRoute = BranchRepairsRouteImport.update({
+  id: '/repairs',
+  path: '/repairs',
+  getParentRoute: () => BranchRoute,
+} as any)
 const BranchProductsRoute = BranchProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -69,10 +79,20 @@ const BranchInventoryRoute = BranchInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => BranchRoute,
 } as any)
+const BranchCustomersRoute = BranchCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => BranchRoute,
+} as any)
 const BranchBillingRoute = BranchBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
   getParentRoute: () => BranchRoute,
+} as any)
+const AdminRepairsRoute = AdminRepairsRouteImport.update({
+  id: '/repairs',
+  path: '/repairs',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
   id: '/products',
@@ -82,6 +102,11 @@ const AdminProductsRoute = AdminProductsRouteImport.update({
 const AdminInventoryRoute = AdminInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCustomersRoute = AdminCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminBranchesRoute = AdminBranchesRouteImport.update({
@@ -94,19 +119,29 @@ const AdminBillsRoute = AdminBillsRouteImport.update({
   path: '/bills',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminBillingRoute = AdminBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/branch': typeof BranchRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/billing': typeof AdminBillingRoute
   '/admin/bills': typeof AdminBillsRoute
   '/admin/branches': typeof AdminBranchesRoute
+  '/admin/customers': typeof AdminCustomersRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/repairs': typeof AdminRepairsRoute
   '/branch/billing': typeof BranchBillingRoute
+  '/branch/customers': typeof BranchCustomersRoute
   '/branch/inventory': typeof BranchInventoryRoute
   '/branch/products': typeof BranchProductsRoute
+  '/branch/repairs': typeof BranchRepairsRoute
   '/branch/reports': typeof BranchReportsRoute
   '/admin/': typeof AdminIndexRoute
   '/branch/': typeof BranchIndexRoute
@@ -114,13 +149,18 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/billing': typeof AdminBillingRoute
   '/admin/bills': typeof AdminBillsRoute
   '/admin/branches': typeof AdminBranchesRoute
+  '/admin/customers': typeof AdminCustomersRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/repairs': typeof AdminRepairsRoute
   '/branch/billing': typeof BranchBillingRoute
+  '/branch/customers': typeof BranchCustomersRoute
   '/branch/inventory': typeof BranchInventoryRoute
   '/branch/products': typeof BranchProductsRoute
+  '/branch/repairs': typeof BranchRepairsRoute
   '/branch/reports': typeof BranchReportsRoute
   '/admin': typeof AdminIndexRoute
   '/branch': typeof BranchIndexRoute
@@ -131,13 +171,18 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/branch': typeof BranchRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/billing': typeof AdminBillingRoute
   '/admin/bills': typeof AdminBillsRoute
   '/admin/branches': typeof AdminBranchesRoute
+  '/admin/customers': typeof AdminCustomersRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/repairs': typeof AdminRepairsRoute
   '/branch/billing': typeof BranchBillingRoute
+  '/branch/customers': typeof BranchCustomersRoute
   '/branch/inventory': typeof BranchInventoryRoute
   '/branch/products': typeof BranchProductsRoute
+  '/branch/repairs': typeof BranchRepairsRoute
   '/branch/reports': typeof BranchReportsRoute
   '/admin/': typeof AdminIndexRoute
   '/branch/': typeof BranchIndexRoute
@@ -149,13 +194,18 @@ export interface FileRouteTypes {
     | '/admin'
     | '/branch'
     | '/login'
+    | '/admin/billing'
     | '/admin/bills'
     | '/admin/branches'
+    | '/admin/customers'
     | '/admin/inventory'
     | '/admin/products'
+    | '/admin/repairs'
     | '/branch/billing'
+    | '/branch/customers'
     | '/branch/inventory'
     | '/branch/products'
+    | '/branch/repairs'
     | '/branch/reports'
     | '/admin/'
     | '/branch/'
@@ -163,13 +213,18 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/admin/billing'
     | '/admin/bills'
     | '/admin/branches'
+    | '/admin/customers'
     | '/admin/inventory'
     | '/admin/products'
+    | '/admin/repairs'
     | '/branch/billing'
+    | '/branch/customers'
     | '/branch/inventory'
     | '/branch/products'
+    | '/branch/repairs'
     | '/branch/reports'
     | '/admin'
     | '/branch'
@@ -179,13 +234,18 @@ export interface FileRouteTypes {
     | '/admin'
     | '/branch'
     | '/login'
+    | '/admin/billing'
     | '/admin/bills'
     | '/admin/branches'
+    | '/admin/customers'
     | '/admin/inventory'
     | '/admin/products'
+    | '/admin/repairs'
     | '/branch/billing'
+    | '/branch/customers'
     | '/branch/inventory'
     | '/branch/products'
+    | '/branch/repairs'
     | '/branch/reports'
     | '/admin/'
     | '/branch/'
@@ -249,6 +309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BranchReportsRouteImport
       parentRoute: typeof BranchRoute
     }
+    '/branch/repairs': {
+      id: '/branch/repairs'
+      path: '/repairs'
+      fullPath: '/branch/repairs'
+      preLoaderRoute: typeof BranchRepairsRouteImport
+      parentRoute: typeof BranchRoute
+    }
     '/branch/products': {
       id: '/branch/products'
       path: '/products'
@@ -263,12 +330,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BranchInventoryRouteImport
       parentRoute: typeof BranchRoute
     }
+    '/branch/customers': {
+      id: '/branch/customers'
+      path: '/customers'
+      fullPath: '/branch/customers'
+      preLoaderRoute: typeof BranchCustomersRouteImport
+      parentRoute: typeof BranchRoute
+    }
     '/branch/billing': {
       id: '/branch/billing'
       path: '/billing'
       fullPath: '/branch/billing'
       preLoaderRoute: typeof BranchBillingRouteImport
       parentRoute: typeof BranchRoute
+    }
+    '/admin/repairs': {
+      id: '/admin/repairs'
+      path: '/repairs'
+      fullPath: '/admin/repairs'
+      preLoaderRoute: typeof AdminRepairsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/products': {
       id: '/admin/products'
@@ -282,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/admin/inventory'
       preLoaderRoute: typeof AdminInventoryRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/customers': {
+      id: '/admin/customers'
+      path: '/customers'
+      fullPath: '/admin/customers'
+      preLoaderRoute: typeof AdminCustomersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/branches': {
@@ -298,22 +386,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBillsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/billing': {
+      id: '/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AdminBillingRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminBillingRoute: typeof AdminBillingRoute
   AdminBillsRoute: typeof AdminBillsRoute
   AdminBranchesRoute: typeof AdminBranchesRoute
+  AdminCustomersRoute: typeof AdminCustomersRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
   AdminProductsRoute: typeof AdminProductsRoute
+  AdminRepairsRoute: typeof AdminRepairsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminBillingRoute: AdminBillingRoute,
   AdminBillsRoute: AdminBillsRoute,
   AdminBranchesRoute: AdminBranchesRoute,
+  AdminCustomersRoute: AdminCustomersRoute,
   AdminInventoryRoute: AdminInventoryRoute,
   AdminProductsRoute: AdminProductsRoute,
+  AdminRepairsRoute: AdminRepairsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
@@ -321,16 +422,20 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface BranchRouteChildren {
   BranchBillingRoute: typeof BranchBillingRoute
+  BranchCustomersRoute: typeof BranchCustomersRoute
   BranchInventoryRoute: typeof BranchInventoryRoute
   BranchProductsRoute: typeof BranchProductsRoute
+  BranchRepairsRoute: typeof BranchRepairsRoute
   BranchReportsRoute: typeof BranchReportsRoute
   BranchIndexRoute: typeof BranchIndexRoute
 }
 
 const BranchRouteChildren: BranchRouteChildren = {
   BranchBillingRoute: BranchBillingRoute,
+  BranchCustomersRoute: BranchCustomersRoute,
   BranchInventoryRoute: BranchInventoryRoute,
   BranchProductsRoute: BranchProductsRoute,
+  BranchRepairsRoute: BranchRepairsRoute,
   BranchReportsRoute: BranchReportsRoute,
   BranchIndexRoute: BranchIndexRoute,
 }

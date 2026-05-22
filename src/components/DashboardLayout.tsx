@@ -34,6 +34,19 @@ export function DashboardLayout({
     return exactRoot || active;
   };
 
+  const mobileNavItems = items
+    .filter((it) => {
+      const path = it.to.toLowerCase();
+      return (
+        path.endsWith("/admin") ||
+        path.endsWith("/branch") ||
+        path.endsWith("/billing") ||
+        path.endsWith("/repairs") ||
+        path.endsWith("/customers")
+      );
+    })
+    .slice(0, 4);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar h-full">
@@ -46,7 +59,7 @@ export function DashboardLayout({
             <div className="mt-1 font-display text-xl leading-tight">{workspaceName}</div>
           </div>
         </div>
-        <nav className="flex-1 px-3">
+        <nav className="flex-1 overflow-y-auto px-3">
           {items.map((it) => {
             const Icon = it.icon;
             return (
@@ -135,7 +148,7 @@ export function DashboardLayout({
                 <X className="size-4" />
               </button>
             </div>
-            <nav className="flex-1 px-3">
+            <nav className="flex-1 overflow-y-auto px-3">
               {items.map((it) => {
                 const Icon = it.icon;
                 return (
@@ -172,9 +185,9 @@ export function DashboardLayout({
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-2 backdrop-blur md:hidden">
         <div
           className="grid gap-1"
-          style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${mobileNavItems.length}, minmax(0, 1fr))` }}
         >
-          {items.map((it) => {
+          {mobileNavItems.map((it) => {
             const Icon = it.icon;
             const active = isActive(it.to);
             return (

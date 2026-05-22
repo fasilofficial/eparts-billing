@@ -292,7 +292,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 sm:ml-auto">
+        <div className="hidden sm:flex flex-wrap gap-2 sm:ml-auto">
           <button className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent transition">
             Drafts
           </button>
@@ -641,6 +641,24 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Mobile Action Buttons (visible ONLY on mobile, hidden on tablet/desktop) */}
+        <div className="flex sm:hidden flex-col gap-2 mt-6">
+          <button
+            onClick={openPaymentCollector}
+            className="w-full rounded-xl bg-indigo-600 text-white py-3.5 text-sm font-bold shadow-soft hover:bg-indigo-700 transition text-center"
+          >
+            Complete Sale
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button className="w-full rounded-xl border border-border bg-card py-3 text-center text-sm font-bold hover:bg-accent transition">
+              Save as Draft
+            </button>
+            <button className="w-full rounded-xl border border-border bg-card py-3 text-center text-sm font-bold hover:bg-accent transition">
+              Drafts
+            </button>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
 import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { useStore, fmtDate, fmtMoney, type Customer } from "@/lib/store";
-import { Building2, Pencil, Plus, Trash2, UserRound, X } from "lucide-react";
+import { Building2, Pencil, Plus, Trash2, UserRound, X, SlidersHorizontal, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const countryCodes = ["+91", "+1", "+44", "+971", "+61"];
@@ -22,6 +22,13 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
 
+  // Filters Modal State
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [custType, setCustType] = useState<"All" | "Business" | "Direct">("All");
+  const [payStatus, setPayStatus] = useState<"All" | "Pending" | "Paid">("All");
+  const [amountFrom, setAmountFrom] = useState("0");
+  const [amountTo, setAmountTo] = useState("");
+
   const closeDialog = () => {
     setOpen(false);
     setEditing(null);
@@ -32,10 +39,33 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
       customers.filter((customer) => {
         if (!isAdmin && customer.branchId !== session?.branchId) return false;
         if (isAdmin && branchFilter !== "all" && customer.branchId !== branchFilter) return false;
+
+        // 1. Customer Type filter
+        if (custType !== "All" && customer.type !== custType) return false;
+
+        // Compute pending amount: Receivable is money the customer owes us
+        const pendingAmount = customer.balanceType === "Receivable" ? customer.openingBalanceAmount : 0;
+
+        // 2. Payment Status filter
+        if (payStatus === "Pending" && pendingAmount <= 0) return false;
+        if (payStatus === "Paid" && pendingAmount > 0) return false;
+
+        // 3. Pending Amount From
+        if (amountFrom !== "") {
+          const fromVal = Number(amountFrom);
+          if (!isNaN(fromVal) && pendingAmount < fromVal) return false;
+        }
+
+        // 4. Pending Amount To
+        if (amountTo !== "") {
+          const toVal = Number(amountTo);
+          if (!isNaN(toVal) && pendingAmount > toVal) return false;
+        }
+
         const text = `${customer.name} ${customer.phone} ${customer.email ?? ""}`.toLowerCase();
         return query === "" || text.includes(query.toLowerCase());
       }),
-    [branchFilter, customers, isAdmin, query, session?.branchId],
+    [branchFilter, customers, isAdmin, query, session?.branchId, custType, payStatus, amountFrom, amountTo],
   );
 
   const exportRows = useMemo(
@@ -82,18 +112,28 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
         }
       />
 
-      <div className="mb-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-        <input
-          placeholder="Search customers..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full max-w-xs rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
-        />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex w-full max-w-md gap-2">
+          <input
+            placeholder="Search customers..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+          />
+          <button
+            type="button"
+            onClick={() => setFilterOpen(true)}
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-accent cursor-pointer"
+          >
+            <SlidersHorizontal className="size-4 text-muted-foreground" />
+            Filter
+          </button>
+        </div>
         {isAdmin && (
           <select
             value={branchFilter}
             onChange={(e) => setBranchFilter(e.target.value)}
-            className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink w-full sm:w-auto"
           >
             <option value="all">All branches</option>
             {branches.map((branch) => (
@@ -135,10 +175,10 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
                 </div>
                 <div className="flex shrink-0 items-start justify-between gap-3 sm:block sm:text-right">
                   <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                    {customer.balanceType}
-                  </div>
-                  <div className="num text-lg">{fmtMoney(customer.openingBalanceAmount)}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {customer.balanceType}
+                    </div>
+                    <div className="num text-lg">{fmtMoney(customer.openingBalanceAmount)}</div>
                   </div>
                   <div className="flex gap-1 sm:mt-3 sm:justify-end">
                     <button
@@ -178,7 +218,7 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
         })}
         {scopedCustomers.length === 0 && (
           <div className="rounded-xl border border-dashed border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
-            No customers yet.
+            No customers found matching filters.
           </div>
         )}
       </div>
@@ -206,7 +246,164 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
           }}
         />
       )}
+
+      {filterOpen && (
+        <CustomerFilterModal
+          custType={custType}
+          setCustType={setCustType}
+          payStatus={payStatus}
+          setPayStatus={setPayStatus}
+          amountFrom={amountFrom}
+          setAmountFrom={setAmountFrom}
+          amountTo={amountTo}
+          setAmountTo={setAmountTo}
+          onClose={() => setFilterOpen(false)}
+          onClear={() => {
+            setCustType("All");
+            setPayStatus("All");
+            setAmountFrom("0");
+            setAmountTo("");
+          }}
+        />
+      )}
     </>
+  );
+}
+
+function CustomerFilterModal({
+  custType,
+  setCustType,
+  payStatus,
+  setPayStatus,
+  amountFrom,
+  setAmountFrom,
+  amountTo,
+  setAmountTo,
+  onClose,
+  onClear,
+}: {
+  custType: "All" | "Business" | "Direct";
+  setCustType: (v: "All" | "Business" | "Direct") => void;
+  payStatus: "All" | "Pending" | "Paid";
+  setPayStatus: (v: "All" | "Pending" | "Paid") => void;
+  amountFrom: string;
+  setAmountFrom: (v: string) => void;
+  amountTo: string;
+  setAmountTo: (v: string) => void;
+  onClose: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[28rem] rounded-2xl border border-border bg-card p-6 shadow-paper animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-foreground">Filter Customers</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-accent transition cursor-pointer">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="space-y-5">
+          {/* Customer Type Toggle */}
+          <div className="space-y-2">
+            <span className="text-sm font-semibold text-foreground">Customer Type</span>
+            <div className="grid grid-cols-3 gap-2">
+              {(["All", "Business", "Direct"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setCustType(t)}
+                  className={`rounded-xl py-2 text-center text-sm font-medium transition cursor-pointer select-none ${
+                    custType === t
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "border border-border bg-card text-foreground hover:bg-accent"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment Status Toggle */}
+          <div className="space-y-2">
+            <span className="text-sm font-semibold text-foreground">Payment Status</span>
+            <div className="grid grid-cols-3 gap-2">
+              {(["All", "Pending", "Paid"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setPayStatus(s)}
+                  className={`rounded-xl py-2 text-center text-sm font-medium transition cursor-pointer select-none ${
+                    payStatus === s
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "border border-border bg-card text-foreground hover:bg-accent"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Pending Amount From */}
+          <div className="space-y-1.5">
+            <span className="text-sm font-semibold text-foreground">Pending Amount From</span>
+            <input
+              type="number"
+              value={amountFrom}
+              onChange={(e) => setAmountFrom(e.target.value)}
+              placeholder="0"
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition"
+            />
+            <span className="text-xs text-muted-foreground block">Minimum pending amount</span>
+          </div>
+
+          {/* Pending Amount To */}
+          <div className="space-y-1.5">
+            <span className="text-sm font-semibold text-foreground">Pending Amount To</span>
+            <input
+              type="number"
+              value={amountTo}
+              onChange={(e) => setAmountTo(e.target.value)}
+              placeholder="No limit"
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition"
+            />
+            <span className="text-xs text-muted-foreground block font-sans">
+              Maximum pending amount (leave empty for no limit)
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClear();
+                onClose();
+              }}
+              className="w-full rounded-xl bg-muted/60 py-3 text-center text-sm font-semibold text-foreground transition hover:bg-muted/80 cursor-pointer"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-center text-sm font-semibold text-white transition hover:bg-indigo-700 cursor-pointer"
+            >
+              <Check className="size-4" />
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

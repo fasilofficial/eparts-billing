@@ -15,11 +15,162 @@ export interface Branch {
 export interface Product {
   id: string;
   branchId: string;
+  type?: "Product" | "Service";
+  image?: string;
   name: string;
   sku: string;
+  barcode?: string;
   price: number;
+  costPrice?: number;
+  sellingPrice?: number;
   stock: number;
+  lowStockAlert?: number;
+  trackBySerialNumbers?: boolean;
   category?: string;
+  brand?: string;
+  description?: string;
+  tax?: string;
+  unit?: string;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export type SupplierBalanceType = "Payable" | "Receivable";
+
+export interface Supplier {
+  id: string;
+  branchId: string;
+  companyName: string;
+  contactPerson?: string;
+  status: "Active" | "Inactive";
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  openingBalanceAmount: number;
+  balanceType: SupplierBalanceType;
+  balanceAsOfDate?: string;
+  paymentTerms?: string;
+  creditLimit: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Expense {
+  id: string;
+  branchId: string;
+  expenseNumber: string;
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+  taxRate: number;
+  subtotal: number;
+  total: number;
+  supplierId?: string;
+  customerId?: string;
+  relatedDocumentType: string;
+  isRecurring: boolean;
+  receipt?: string;
+  notes?: string;
+  status: "Paid" | "Unpaid";
+  createdAt: string;
+}
+
+export interface PurchaseCharge {
+  label: string;
+  amount: number;
+}
+
+export interface PurchaseItem {
+  id?: string;
+  purchaseOrderId?: string;
+  productId?: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  tax: number;
+  discountPercent: number;
+  total: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  number: string;
+  branchId: string;
+  supplierId?: string;
+  supplierName: string;
+  purchaseDate: string;
+  expectedDelivery?: string;
+  attachments: string[];
+  shippingCharge: number;
+  shippingDetails?: string;
+  additionalCharges: PurchaseCharge[];
+  notes?: string;
+  subtotal: number;
+  grandTotal: number;
+  status: "Draft" | "Created";
+  createdAt: string;
+  items: PurchaseItem[];
+}
+
+export interface ReturnRecord {
+  id: string;
+  branchId: string;
+  number: string;
+  partyName: string;
+  date: string;
+  amount: number;
+  status: string;
+  type: "Sale" | "Purchase";
+  createdAt: string;
+}
+
+export interface Category {
+  id: string;
+  type: "Product" | "Expense";
+  name: string;
+  parentCategoryId?: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface PaymentAccount {
+  id: string;
+  branchId: string;
+  accountName: string;
+  accountType: "Bank Account" | "Cash" | "Card" | "UPI" | "Cheque" | "Other";
+  status: "Active" | "Inactive";
+  accountNumber?: string;
+  openingBalance: number;
+  currentBalance: number;
+  description?: string;
+  createdAt: string;
+}
+
+export interface AccountTransfer {
+  id: string;
+  branchId: string;
+  fromAccountId: string;
+  fromAccountName: string;
+  toAccountId: string;
+  toAccountName: string;
+  transferAmount: number;
+  transferDate: string;
+  referenceNumber: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface BillItem {
@@ -36,7 +187,13 @@ export interface Bill {
   number: string;
   branchId: string;
   customer?: string;
+  customerId?: string;
   paymentMethod: string;
+  saleDate: string;
+  dueDate?: string;
+  notes?: string;
+  discountType: "Percentage" | "Fixed";
+  discountAmount: number;
   subtotal: number;
   tax: number;
   total: number;
@@ -105,6 +262,14 @@ interface StoreState {
   bills: Bill[];
   customers: Customer[];
   repairs: Repair[];
+  suppliers: Supplier[];
+  expenses: Expense[];
+  purchaseOrders: PurchaseOrder[];
+  returns: ReturnRecord[];
+  categories: Category[];
+  paymentAccounts: PaymentAccount[];
+  accountTransfers: AccountTransfer[];
+  brands: Brand[];
 }
 
 interface StoreCtx extends StoreState {
@@ -124,6 +289,30 @@ interface StoreCtx extends StoreState {
   addRepair: (r: Omit<Repair, "id" | "number" | "createdAt" | "status">) => Promise<Repair | null>;
   updateRepair: (id: string, patch: Omit<Repair, "id" | "number" | "createdAt">) => Promise<void>;
   deleteRepair: (id: string) => Promise<void>;
+  addSupplier: (s: Omit<Supplier, "id" | "createdAt">) => Promise<void>;
+  updateSupplier: (id: string, patch: Omit<Supplier, "id" | "createdAt">) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
+  addExpense: (e: Omit<Expense, "id" | "createdAt">) => Promise<void>;
+  updateExpense: (id: string, patch: Omit<Expense, "id" | "createdAt">) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  addPurchaseOrder: (p: Omit<PurchaseOrder, "id" | "number" | "createdAt">) => Promise<void>;
+  updatePurchaseOrder: (id: string, patch: Omit<PurchaseOrder, "id" | "number" | "createdAt">) => Promise<void>;
+  deletePurchaseOrder: (id: string) => Promise<void>;
+  addReturn: (r: Omit<ReturnRecord, "id" | "number" | "createdAt">) => Promise<void>;
+  updateReturn: (id: string, patch: Omit<ReturnRecord, "id" | "number" | "createdAt">) => Promise<void>;
+  deleteReturn: (id: string) => Promise<void>;
+  addCategory: (c: Omit<Category, "id" | "createdAt">) => Promise<void>;
+  updateCategory: (id: string, patch: Omit<Category, "id" | "createdAt">) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  addPaymentAccount: (a: Omit<PaymentAccount, "id" | "createdAt" | "currentBalance">) => Promise<void>;
+  updatePaymentAccount: (id: string, patch: Omit<PaymentAccount, "id" | "createdAt">) => Promise<void>;
+  deletePaymentAccount: (id: string) => Promise<void>;
+  addAccountTransfer: (t: Omit<AccountTransfer, "id" | "createdAt" | "fromAccountName" | "toAccountName">) => Promise<void>;
+  updateAccountTransfer: (id: string, patch: Omit<AccountTransfer, "id" | "createdAt">) => Promise<void>;
+  deleteAccountTransfer: (id: string) => Promise<void>;
+  addBrand: (b: Omit<Brand, "id" | "createdAt">) => Promise<void>;
+  updateBrand: (id: string, patch: Omit<Brand, "id" | "createdAt">) => Promise<void>;
+  deleteBrand: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -181,6 +370,136 @@ const repairItemsToDb = (repairId: string, items: RepairItem[]) =>
     expected_completion_date: item.expectedCompletionDate || null,
   }));
 
+const productToDb = (p: Partial<Product>) => {
+  const { branchId, costPrice, sellingPrice, lowStockAlert, trackBySerialNumbers, isActive, createdAt, ...rest } = p;
+  return {
+    ...rest,
+    name: p.name,
+    price: p.sellingPrice ?? p.price ?? 0,
+    stock: p.type === "Service" ? 0 : p.stock ?? 0,
+    branch_id: branchId,
+    cost_price: costPrice ?? 0,
+    selling_price: sellingPrice ?? p.price ?? 0,
+    low_stock_alert: lowStockAlert ?? 10,
+    track_by_serial_numbers: trackBySerialNumbers ?? false,
+    is_active: isActive ?? true,
+  };
+};
+
+const supplierToDb = (s: Omit<Supplier, "id" | "createdAt">) => ({
+  branch_id: s.branchId,
+  company_name: s.companyName,
+  contact_person: s.contactPerson || null,
+  status: s.status,
+  email: s.email || null,
+  phone: s.phone || null,
+  address: s.address || null,
+  city: s.city || null,
+  state: s.state || null,
+  postal_code: s.postalCode || null,
+  country: s.country || null,
+  opening_balance_amount: s.openingBalanceAmount || 0,
+  balance_type: s.balanceType,
+  balance_as_of_date: s.balanceAsOfDate || null,
+  payment_terms: s.paymentTerms || null,
+  credit_limit: s.creditLimit || 0,
+  notes: s.notes || null,
+});
+
+const expenseToDb = (e: Omit<Expense, "id" | "createdAt">) => ({
+  branch_id: e.branchId,
+  expense_number: e.expenseNumber,
+  date: e.date,
+  category: e.category,
+  description: e.description,
+  amount: e.amount,
+  tax_rate: e.taxRate || 0,
+  subtotal: e.subtotal,
+  total: e.total,
+  supplier_id: e.supplierId || null,
+  customer_id: e.customerId || null,
+  related_document_type: e.relatedDocumentType,
+  is_recurring: e.isRecurring,
+  receipt: e.receipt || null,
+  notes: e.notes || null,
+  status: e.status,
+});
+
+const purchaseOrderToDb = (p: Omit<PurchaseOrder, "id" | "number" | "createdAt">, number?: string) => ({
+  number,
+  branch_id: p.branchId,
+  supplier_id: p.supplierId || null,
+  supplier_name: p.supplierName,
+  purchase_date: p.purchaseDate,
+  expected_delivery: p.expectedDelivery || null,
+  attachments: p.attachments,
+  shipping_charge: p.shippingCharge || 0,
+  shipping_details: p.shippingDetails || null,
+  additional_charges: p.additionalCharges,
+  notes: p.notes || null,
+  subtotal: p.subtotal,
+  grand_total: p.grandTotal,
+  status: p.status,
+});
+
+const purchaseItemsToDb = (purchaseOrderId: string, items: PurchaseItem[]) =>
+  items.map((item) => ({
+    purchase_order_id: purchaseOrderId,
+    product_id: item.productId || null,
+    product_name: item.productName,
+    quantity: item.quantity || 1,
+    unit_price: item.unitPrice || 0,
+    tax: item.tax || 0,
+    discount_percent: item.discountPercent || 0,
+    total: item.total || 0,
+  }));
+
+const returnToDb = (r: Omit<ReturnRecord, "id" | "number" | "createdAt">, number?: string) => ({
+  number,
+  branch_id: r.branchId,
+  party_name: r.partyName,
+  date: r.date,
+  amount: r.amount,
+  status: r.status,
+  type: r.type,
+});
+
+const categoryToDb = (c: Omit<Category, "id" | "createdAt">) => ({
+  type: c.type,
+  name: c.name,
+  parent_category_id: c.parentCategoryId || null,
+  description: c.description || null,
+  is_active: c.isActive,
+});
+
+const paymentAccountToDb = (a: Omit<PaymentAccount, "id" | "createdAt"> | Omit<PaymentAccount, "id" | "createdAt" | "currentBalance">) => ({
+  branch_id: a.branchId,
+  account_name: a.accountName,
+  account_type: a.accountType,
+  status: a.status,
+  account_number: a.accountNumber || null,
+  opening_balance: a.openingBalance || 0,
+  current_balance: "currentBalance" in a ? a.currentBalance : a.openingBalance || 0,
+  description: a.description || null,
+});
+
+const accountTransferToDb = (t: Omit<AccountTransfer, "id" | "createdAt">) => ({
+  branch_id: t.branchId,
+  from_account_id: t.fromAccountId,
+  from_account_name: t.fromAccountName,
+  to_account_id: t.toAccountId,
+  to_account_name: t.toAccountName,
+  transfer_amount: t.transferAmount,
+  transfer_date: t.transferDate,
+  reference_number: t.referenceNumber,
+  description: t.description || null,
+});
+
+const brandToDb = (b: Omit<Brand, "id" | "createdAt">) => ({
+  name: b.name,
+  is_active: b.isActive,
+});
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>({
     branches: [],
@@ -188,18 +507,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     bills: [],
     customers: [],
     repairs: [],
+    suppliers: [],
+    expenses: [],
+    purchaseOrders: [],
+    returns: [],
+    categories: [],
+    paymentAccounts: [],
+    accountTransfers: [],
+    brands: [],
   });
   const [session, setSession] = useState<Session | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   const refreshData = async () => {
     try {
-      const [branchesRes, productsRes, billsRes, customersRes, repairsRes] = await Promise.all([
+      const [
+        branchesRes,
+        productsRes,
+        billsRes,
+        customersRes,
+        repairsRes,
+        suppliersRes,
+        expensesRes,
+        purchaseOrdersRes,
+        returnsRes,
+        categoriesRes,
+        paymentAccountsRes,
+        accountTransfersRes,
+        brandsRes,
+      ] = await Promise.all([
         supabase.from("branches").select("*").order("created_at", { ascending: false }),
         supabase.from("products").select("*").order("created_at", { ascending: false }),
         supabase.from("bills").select("*, items:bill_items(*)").order("created_at", { ascending: false }),
         supabase.from("customers").select("*").order("created_at", { ascending: false }),
         supabase.from("repairs").select("*, items:repair_items(*)").order("created_at", { ascending: false }),
+        supabase.from("suppliers").select("*").order("created_at", { ascending: false }),
+        supabase.from("expenses").select("*").order("created_at", { ascending: false }),
+        supabase.from("purchase_orders").select("*, items:purchase_order_items(*)").order("created_at", { ascending: false }),
+        supabase.from("returns").select("*").order("created_at", { ascending: false }),
+        supabase.from("categories").select("*").order("created_at", { ascending: false }),
+        supabase.from("payment_accounts").select("*").order("created_at", { ascending: false }),
+        supabase.from("account_transfers").select("*").order("created_at", { ascending: false }),
+        supabase.from("brands").select("*").order("created_at", { ascending: false }),
       ]);
 
       const mappedBranches: Branch[] = (branchesRes.data || []).map((b: any) => ({
@@ -208,13 +557,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }));
 
       const mappedProducts: Product[] = (productsRes.data || []).map((p: any) => ({
-        ...p,
-        branchId: p.branch_id
+        id: p.id,
+        branchId: p.branch_id,
+        type: p.type ?? "Product",
+        image: p.image ?? undefined,
+        name: p.name,
+        sku: p.sku,
+        barcode: p.barcode ?? undefined,
+        price: Number(p.selling_price ?? p.price ?? 0),
+        costPrice: Number(p.cost_price ?? 0),
+        sellingPrice: Number(p.selling_price ?? p.price ?? 0),
+        stock: Number(p.stock ?? 0),
+        lowStockAlert: Number(p.low_stock_alert ?? 10),
+        trackBySerialNumbers: Boolean(p.track_by_serial_numbers),
+        category: p.category ?? undefined,
+        brand: p.brand ?? undefined,
+        description: p.description ?? undefined,
+        tax: p.tax ?? "No Tax",
+        unit: p.unit ?? "Pieces",
+        isActive: p.is_active ?? true,
+        createdAt: p.created_at
       }));
 
       const mappedBills: Bill[] = (billsRes.data || []).map((b: any) => ({
         ...b,
         branchId: b.branch_id,
+        customerId: b.customer_id ?? undefined,
+        saleDate: b.sale_date || b.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        dueDate: b.due_date ?? undefined,
+        notes: b.notes ?? undefined,
+        discountType: b.discount_type || "Percentage",
+        discountAmount: Number(b.discount_amount || 0),
         paymentMethod: b.payment_method || "Cash",
         createdAt: b.created_at,
         items: (b.items || []).map((i: any) => ({
@@ -267,12 +640,149 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }))
       }));
 
+      const mappedSuppliers: Supplier[] = (suppliersRes.data || []).map((s: any) => ({
+        id: s.id,
+        branchId: s.branch_id,
+        companyName: s.company_name,
+        contactPerson: s.contact_person ?? undefined,
+        status: s.status ?? "Active",
+        email: s.email ?? undefined,
+        phone: s.phone ?? undefined,
+        address: s.address ?? undefined,
+        city: s.city ?? undefined,
+        state: s.state ?? undefined,
+        postalCode: s.postal_code ?? undefined,
+        country: s.country ?? undefined,
+        openingBalanceAmount: Number(s.opening_balance_amount ?? 0),
+        balanceType: s.balance_type ?? "Payable",
+        balanceAsOfDate: s.balance_as_of_date ?? undefined,
+        paymentTerms: s.payment_terms ?? undefined,
+        creditLimit: Number(s.credit_limit ?? 0),
+        notes: s.notes ?? undefined,
+        createdAt: s.created_at,
+      }));
+
+      const mappedExpenses: Expense[] = (expensesRes.data || []).map((e: any) => ({
+        id: e.id,
+        branchId: e.branch_id,
+        expenseNumber: e.expense_number,
+        date: e.date,
+        category: e.category,
+        description: e.description,
+        amount: Number(e.amount ?? 0),
+        taxRate: Number(e.tax_rate ?? 0),
+        subtotal: Number(e.subtotal ?? e.amount ?? 0),
+        total: Number(e.total ?? 0),
+        supplierId: e.supplier_id ?? undefined,
+        customerId: e.customer_id ?? undefined,
+        relatedDocumentType: e.related_document_type ?? "None",
+        isRecurring: Boolean(e.is_recurring),
+        receipt: e.receipt ?? undefined,
+        notes: e.notes ?? undefined,
+        status: e.status ?? "Paid",
+        createdAt: e.created_at,
+      }));
+
+      const mappedPurchaseOrders: PurchaseOrder[] = (purchaseOrdersRes.data || []).map((p: any) => ({
+        id: p.id,
+        number: p.number,
+        branchId: p.branch_id,
+        supplierId: p.supplier_id ?? undefined,
+        supplierName: p.supplier_name,
+        purchaseDate: p.purchase_date,
+        expectedDelivery: p.expected_delivery ?? undefined,
+        attachments: p.attachments ?? [],
+        shippingCharge: Number(p.shipping_charge ?? 0),
+        shippingDetails: p.shipping_details ?? undefined,
+        additionalCharges: p.additional_charges ?? [],
+        notes: p.notes ?? undefined,
+        subtotal: Number(p.subtotal ?? 0),
+        grandTotal: Number(p.grand_total ?? 0),
+        status: p.status ?? "Draft",
+        createdAt: p.created_at,
+        items: (p.items || []).map((i: any) => ({
+          id: i.id,
+          purchaseOrderId: i.purchase_order_id,
+          productId: i.product_id ?? undefined,
+          productName: i.product_name,
+          quantity: Number(i.quantity ?? 1),
+          unitPrice: Number(i.unit_price ?? 0),
+          tax: Number(i.tax ?? 0),
+          discountPercent: Number(i.discount_percent ?? 0),
+          total: Number(i.total ?? 0),
+        })),
+      }));
+
+      const mappedReturns: ReturnRecord[] = (returnsRes.data || []).map((r: any) => ({
+        id: r.id,
+        branchId: r.branch_id,
+        number: r.number,
+        partyName: r.party_name,
+        date: r.date,
+        amount: Number(r.amount ?? 0),
+        status: r.status,
+        type: r.type,
+        createdAt: r.created_at,
+      }));
+
+      const mappedCategories: Category[] = (categoriesRes.data || []).map((c: any) => ({
+        id: c.id,
+        type: c.type,
+        name: c.name,
+        parentCategoryId: c.parent_category_id ?? undefined,
+        description: c.description ?? undefined,
+        isActive: Boolean(c.is_active),
+        createdAt: c.created_at,
+      }));
+
+      const mappedPaymentAccounts: PaymentAccount[] = (paymentAccountsRes.data || []).map((a: any) => ({
+        id: a.id,
+        branchId: a.branch_id,
+        accountName: a.account_name,
+        accountType: a.account_type,
+        status: a.status,
+        accountNumber: a.account_number ?? undefined,
+        openingBalance: Number(a.opening_balance ?? 0),
+        currentBalance: Number(a.current_balance ?? 0),
+        description: a.description ?? undefined,
+        createdAt: a.created_at,
+      }));
+
+      const mappedAccountTransfers: AccountTransfer[] = (accountTransfersRes.data || []).map((t: any) => ({
+        id: t.id,
+        branchId: t.branch_id,
+        fromAccountId: t.from_account_id,
+        fromAccountName: t.from_account_name,
+        toAccountId: t.to_account_id,
+        toAccountName: t.to_account_name,
+        transferAmount: Number(t.transfer_amount ?? 0),
+        transferDate: t.transfer_date,
+        referenceNumber: t.reference_number,
+        description: t.description ?? undefined,
+        createdAt: t.created_at,
+      }));
+
+      const mappedBrands: Brand[] = (brandsRes.data || []).map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        isActive: Boolean(b.is_active),
+        createdAt: b.created_at,
+      }));
+
       setState({
         branches: mappedBranches,
         products: mappedProducts,
         bills: mappedBills,
         customers: mappedCustomers,
         repairs: mappedRepairs,
+        suppliers: mappedSuppliers,
+        expenses: mappedExpenses,
+        purchaseOrders: mappedPurchaseOrders,
+        returns: mappedReturns,
+        categories: mappedCategories,
+        paymentAccounts: mappedPaymentAccounts,
+        accountTransfers: mappedAccountTransfers,
+        brands: mappedBrands,
       });
     } catch (err) {
       console.error("Failed to fetch from supabase", err);
@@ -342,17 +852,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await refreshData();
     },
     addProduct: async (p) => {
-      const { branchId, ...rest } = p;
-      const { error } = await supabase.from("products").insert([{ ...rest, branch_id: branchId }]);
+      const { error } = await supabase.from("products").insert([productToDb(p)]);
       if (error) throw new Error(error.message);
       await refreshData();
     },
     updateProduct: async (id, patch) => {
-      const dbPatch: any = { ...patch };
-      if (patch.branchId) {
-        dbPatch.branch_id = patch.branchId;
-        delete dbPatch.branchId;
-      }
+      const dbPatch: any = productToDb(patch);
+      if (!patch.branchId) delete dbPatch.branch_id;
+      if (!patch.name) delete dbPatch.name;
       const { error } = await supabase.from("products").update(dbPatch).eq("id", id);
       if (error) throw new Error(error.message);
       await refreshData();
@@ -364,11 +871,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     addBill: async (b) => {
       const number = `INV-${1000 + state.bills.length + 1}`;
-      const { items, branchId, paymentMethod, ...billData } = b;
+      const { items, branchId, paymentMethod, customerId, saleDate, dueDate, notes, discountType, discountAmount, ...billData } = b;
       
       const { data: newBill, error } = await supabase
         .from("bills")
-        .insert([{ ...billData, payment_method: paymentMethod, branch_id: branchId, number }])
+        .insert([{ 
+          ...billData, 
+          payment_method: paymentMethod, 
+          branch_id: branchId, 
+          customer_id: customerId || null,
+          sale_date: saleDate,
+          due_date: dueDate || null,
+          notes: notes || null,
+          discount_type: discountType,
+          discount_amount: discountAmount,
+          number 
+        }])
         .select()
         .single();
         
@@ -400,6 +918,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...newBill,
         branchId: newBill.branch_id,
         paymentMethod: newBill.payment_method || b.paymentMethod,
+        saleDate: newBill.sale_date,
+        dueDate: newBill.due_date,
+        notes: newBill.notes,
+        discountType: newBill.discount_type,
+        discountAmount: Number(newBill.discount_amount),
         createdAt: newBill.created_at,
         items
       } as any;
@@ -500,6 +1023,150 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteRepair: async (id) => {
       const { error } = await supabase.from("repairs").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addSupplier: async (s) => {
+      const { error } = await supabase.from("suppliers").insert([supplierToDb(s)]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updateSupplier: async (id, patch) => {
+      const { error } = await supabase.from("suppliers").update(supplierToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteSupplier: async (id) => {
+      const { error } = await supabase.from("suppliers").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addExpense: async (e) => {
+      const { error } = await supabase.from("expenses").insert([expenseToDb(e)]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updateExpense: async (id, patch) => {
+      const { error } = await supabase.from("expenses").update(expenseToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteExpense: async (id) => {
+      const { error } = await supabase.from("expenses").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addPurchaseOrder: async (p) => {
+      const number = `PO-${1000 + state.purchaseOrders.length + 1}`;
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .insert([purchaseOrderToDb(p, number)])
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      if (data && p.items.length > 0) {
+        const { error: itemsError } = await supabase.from("purchase_order_items").insert(purchaseItemsToDb(data.id, p.items));
+        if (itemsError) throw new Error(itemsError.message);
+      }
+      await refreshData();
+    },
+    updatePurchaseOrder: async (id, patch) => {
+      const { error } = await supabase.from("purchase_orders").update(purchaseOrderToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      const { error: deleteItemsError } = await supabase.from("purchase_order_items").delete().eq("purchase_order_id", id);
+      if (deleteItemsError) throw new Error(deleteItemsError.message);
+      if (patch.items.length > 0) {
+        const { error: itemsError } = await supabase.from("purchase_order_items").insert(purchaseItemsToDb(id, patch.items));
+        if (itemsError) throw new Error(itemsError.message);
+      }
+      await refreshData();
+    },
+    deletePurchaseOrder: async (id) => {
+      const { error } = await supabase.from("purchase_orders").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addReturn: async (r) => {
+      const prefix = r.type === "Sale" ? "SR" : "PR";
+      const number = `${prefix}-${1000 + state.returns.filter((x) => x.type === r.type).length + 1}`;
+      const { error } = await supabase.from("returns").insert([returnToDb(r, number)]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updateReturn: async (id, patch) => {
+      const { error } = await supabase.from("returns").update(returnToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteReturn: async (id) => {
+      const { error } = await supabase.from("returns").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addCategory: async (c) => {
+      const { error } = await supabase.from("categories").insert([categoryToDb(c)]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updateCategory: async (id, patch) => {
+      const { error } = await supabase.from("categories").update(categoryToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteCategory: async (id) => {
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addPaymentAccount: async (a) => {
+      const { error } = await supabase.from("payment_accounts").insert([paymentAccountToDb(a)]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updatePaymentAccount: async (id, patch) => {
+      const { error } = await supabase.from("payment_accounts").update(paymentAccountToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deletePaymentAccount: async (id) => {
+      const { error } = await supabase.from("payment_accounts").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addAccountTransfer: async (t) => {
+      const from = state.paymentAccounts.find((a) => a.id === t.fromAccountId);
+      const to = state.paymentAccounts.find((a) => a.id === t.toAccountId);
+      if (!from || !to) throw new Error("Select valid accounts");
+      const referenceNumber = t.referenceNumber || `TRF-${new Date().getFullYear()}-${1000 + state.accountTransfers.length + 1}`;
+      const payload = { ...t, referenceNumber, fromAccountName: from.accountName, toAccountName: to.accountName };
+      const { error } = await supabase.from("account_transfers").insert([accountTransferToDb(payload)]);
+      if (error) throw new Error(error.message);
+      await supabase.from("payment_accounts").update({ current_balance: from.currentBalance - t.transferAmount }).eq("id", from.id);
+      await supabase.from("payment_accounts").update({ current_balance: to.currentBalance + t.transferAmount }).eq("id", to.id);
+      await refreshData();
+    },
+    updateAccountTransfer: async (id, patch) => {
+      const { error } = await supabase.from("account_transfers").update(accountTransferToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteAccountTransfer: async (id) => {
+      const { error } = await supabase.from("account_transfers").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addBrand: async (b) => {
+      const { error } = await supabase.from("brands").insert([brandToDb(b)]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updateBrand: async (id, patch) => {
+      const { error } = await supabase.from("brands").update(brandToDb(patch)).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteBrand: async (id) => {
+      const { error } = await supabase.from("brands").delete().eq("id", id);
       if (error) throw new Error(error.message);
       await refreshData();
     },

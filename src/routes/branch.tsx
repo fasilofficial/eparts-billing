@@ -1,15 +1,22 @@
 import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { DashboardLayout, type NavItem } from "@/components/DashboardLayout";
-import { LayoutDashboard, Package, Boxes, ReceiptText, BarChart3, Users, Wrench } from "lucide-react";
+import { LayoutDashboard, Package, Boxes, ReceiptText, BarChart3, Users, Wrench, Truck, ShoppingCart, WalletCards, RotateCcw, Landmark, ArrowLeftRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const items: NavItem[] = [
   { to: "/branch", label: "Overview", icon: LayoutDashboard },
   { to: "/branch/customers", label: "Customers", icon: Users },
+  { to: "/branch/suppliers", label: "Suppliers", icon: Truck },
   { to: "/branch/repairs", label: "Repairs", icon: Wrench },
+  { to: "/branch/purchases", label: "Purchases", icon: ShoppingCart },
+  { to: "/branch/purchase-returns", label: "Purchase Returns", icon: RotateCcw },
+  { to: "/branch/expenses", label: "Expenses", icon: WalletCards },
   { to: "/branch/products", label: "Products", icon: Package },
   { to: "/branch/inventory", label: "Inventory", icon: Boxes },
   { to: "/branch/billing", label: "New bill", icon: ReceiptText },
+  { to: "/branch/sale-returns", label: "Sale Returns", icon: RotateCcw },
+  { to: "/branch/payment-accounts", label: "Payment Accounts", icon: Landmark },
+  { to: "/branch/account-transfers", label: "Transfers", icon: ArrowLeftRight },
   { to: "/branch/reports", label: "Bills & Reports", icon: BarChart3 },
 ];
 

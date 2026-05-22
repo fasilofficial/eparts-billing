@@ -15,19 +15,35 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BranchIndexRouteImport } from './routes/branch.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as BranchSuppliersRouteImport } from './routes/branch.suppliers'
+import { Route as BranchSaleReturnsRouteImport } from './routes/branch.sale-returns'
 import { Route as BranchReportsRouteImport } from './routes/branch.reports'
 import { Route as BranchRepairsRouteImport } from './routes/branch.repairs'
+import { Route as BranchPurchasesRouteImport } from './routes/branch.purchases'
+import { Route as BranchPurchaseReturnsRouteImport } from './routes/branch.purchase-returns'
 import { Route as BranchProductsRouteImport } from './routes/branch.products'
+import { Route as BranchPaymentAccountsRouteImport } from './routes/branch.payment-accounts'
 import { Route as BranchInventoryRouteImport } from './routes/branch.inventory'
+import { Route as BranchExpensesRouteImport } from './routes/branch.expenses'
 import { Route as BranchCustomersRouteImport } from './routes/branch.customers'
 import { Route as BranchBillingRouteImport } from './routes/branch.billing'
+import { Route as BranchAccountTransfersRouteImport } from './routes/branch.account-transfers'
+import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
+import { Route as AdminSaleReturnsRouteImport } from './routes/admin.sale-returns'
 import { Route as AdminRepairsRouteImport } from './routes/admin.repairs'
+import { Route as AdminPurchasesRouteImport } from './routes/admin.purchases'
+import { Route as AdminPurchaseReturnsRouteImport } from './routes/admin.purchase-returns'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
+import { Route as AdminPaymentAccountsRouteImport } from './routes/admin.payment-accounts'
 import { Route as AdminInventoryRouteImport } from './routes/admin.inventory'
+import { Route as AdminExpensesRouteImport } from './routes/admin.expenses'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
+import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
+import { Route as AdminBrandsRouteImport } from './routes/admin.brands'
 import { Route as AdminBranchesRouteImport } from './routes/admin.branches'
 import { Route as AdminBillsRouteImport } from './routes/admin.bills'
 import { Route as AdminBillingRouteImport } from './routes/admin.billing'
+import { Route as AdminAccountTransfersRouteImport } from './routes/admin.account-transfers'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -59,6 +75,16 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const BranchSuppliersRoute = BranchSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => BranchRoute,
+} as any)
+const BranchSaleReturnsRoute = BranchSaleReturnsRouteImport.update({
+  id: '/sale-returns',
+  path: '/sale-returns',
+  getParentRoute: () => BranchRoute,
+} as any)
 const BranchReportsRoute = BranchReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -69,14 +95,34 @@ const BranchRepairsRoute = BranchRepairsRouteImport.update({
   path: '/repairs',
   getParentRoute: () => BranchRoute,
 } as any)
+const BranchPurchasesRoute = BranchPurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
+  getParentRoute: () => BranchRoute,
+} as any)
+const BranchPurchaseReturnsRoute = BranchPurchaseReturnsRouteImport.update({
+  id: '/purchase-returns',
+  path: '/purchase-returns',
+  getParentRoute: () => BranchRoute,
+} as any)
 const BranchProductsRoute = BranchProductsRouteImport.update({
   id: '/products',
   path: '/products',
   getParentRoute: () => BranchRoute,
 } as any)
+const BranchPaymentAccountsRoute = BranchPaymentAccountsRouteImport.update({
+  id: '/payment-accounts',
+  path: '/payment-accounts',
+  getParentRoute: () => BranchRoute,
+} as any)
 const BranchInventoryRoute = BranchInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => BranchRoute,
+} as any)
+const BranchExpensesRoute = BranchExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
   getParentRoute: () => BranchRoute,
 } as any)
 const BranchCustomersRoute = BranchCustomersRouteImport.update({
@@ -89,9 +135,34 @@ const BranchBillingRoute = BranchBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => BranchRoute,
 } as any)
+const BranchAccountTransfersRoute = BranchAccountTransfersRouteImport.update({
+  id: '/account-transfers',
+  path: '/account-transfers',
+  getParentRoute: () => BranchRoute,
+} as any)
+const AdminSuppliersRoute = AdminSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSaleReturnsRoute = AdminSaleReturnsRouteImport.update({
+  id: '/sale-returns',
+  path: '/sale-returns',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminRepairsRoute = AdminRepairsRouteImport.update({
   id: '/repairs',
   path: '/repairs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPurchasesRoute = AdminPurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPurchaseReturnsRoute = AdminPurchaseReturnsRouteImport.update({
+  id: '/purchase-returns',
+  path: '/purchase-returns',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProductsRoute = AdminProductsRouteImport.update({
@@ -99,14 +170,34 @@ const AdminProductsRoute = AdminProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPaymentAccountsRoute = AdminPaymentAccountsRouteImport.update({
+  id: '/payment-accounts',
+  path: '/payment-accounts',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminInventoryRoute = AdminInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminExpensesRoute = AdminExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBrandsRoute = AdminBrandsRouteImport.update({
+  id: '/brands',
+  path: '/brands',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminBranchesRoute = AdminBranchesRouteImport.update({
@@ -124,44 +215,81 @@ const AdminBillingRoute = AdminBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAccountTransfersRoute = AdminAccountTransfersRouteImport.update({
+  id: '/account-transfers',
+  path: '/account-transfers',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/branch': typeof BranchRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/account-transfers': typeof AdminAccountTransfersRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/bills': typeof AdminBillsRoute
   '/admin/branches': typeof AdminBranchesRoute
+  '/admin/brands': typeof AdminBrandsRoute
+  '/admin/categories': typeof AdminCategoriesRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/expenses': typeof AdminExpensesRoute
   '/admin/inventory': typeof AdminInventoryRoute
+  '/admin/payment-accounts': typeof AdminPaymentAccountsRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/purchase-returns': typeof AdminPurchaseReturnsRoute
+  '/admin/purchases': typeof AdminPurchasesRoute
   '/admin/repairs': typeof AdminRepairsRoute
+  '/admin/sale-returns': typeof AdminSaleReturnsRoute
+  '/admin/suppliers': typeof AdminSuppliersRoute
+  '/branch/account-transfers': typeof BranchAccountTransfersRoute
   '/branch/billing': typeof BranchBillingRoute
   '/branch/customers': typeof BranchCustomersRoute
+  '/branch/expenses': typeof BranchExpensesRoute
   '/branch/inventory': typeof BranchInventoryRoute
+  '/branch/payment-accounts': typeof BranchPaymentAccountsRoute
   '/branch/products': typeof BranchProductsRoute
+  '/branch/purchase-returns': typeof BranchPurchaseReturnsRoute
+  '/branch/purchases': typeof BranchPurchasesRoute
   '/branch/repairs': typeof BranchRepairsRoute
   '/branch/reports': typeof BranchReportsRoute
+  '/branch/sale-returns': typeof BranchSaleReturnsRoute
+  '/branch/suppliers': typeof BranchSuppliersRoute
   '/admin/': typeof AdminIndexRoute
   '/branch/': typeof BranchIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/account-transfers': typeof AdminAccountTransfersRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/bills': typeof AdminBillsRoute
   '/admin/branches': typeof AdminBranchesRoute
+  '/admin/brands': typeof AdminBrandsRoute
+  '/admin/categories': typeof AdminCategoriesRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/expenses': typeof AdminExpensesRoute
   '/admin/inventory': typeof AdminInventoryRoute
+  '/admin/payment-accounts': typeof AdminPaymentAccountsRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/purchase-returns': typeof AdminPurchaseReturnsRoute
+  '/admin/purchases': typeof AdminPurchasesRoute
   '/admin/repairs': typeof AdminRepairsRoute
+  '/admin/sale-returns': typeof AdminSaleReturnsRoute
+  '/admin/suppliers': typeof AdminSuppliersRoute
+  '/branch/account-transfers': typeof BranchAccountTransfersRoute
   '/branch/billing': typeof BranchBillingRoute
   '/branch/customers': typeof BranchCustomersRoute
+  '/branch/expenses': typeof BranchExpensesRoute
   '/branch/inventory': typeof BranchInventoryRoute
+  '/branch/payment-accounts': typeof BranchPaymentAccountsRoute
   '/branch/products': typeof BranchProductsRoute
+  '/branch/purchase-returns': typeof BranchPurchaseReturnsRoute
+  '/branch/purchases': typeof BranchPurchasesRoute
   '/branch/repairs': typeof BranchRepairsRoute
   '/branch/reports': typeof BranchReportsRoute
+  '/branch/sale-returns': typeof BranchSaleReturnsRoute
+  '/branch/suppliers': typeof BranchSuppliersRoute
   '/admin': typeof AdminIndexRoute
   '/branch': typeof BranchIndexRoute
 }
@@ -171,19 +299,35 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/branch': typeof BranchRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/account-transfers': typeof AdminAccountTransfersRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/bills': typeof AdminBillsRoute
   '/admin/branches': typeof AdminBranchesRoute
+  '/admin/brands': typeof AdminBrandsRoute
+  '/admin/categories': typeof AdminCategoriesRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/expenses': typeof AdminExpensesRoute
   '/admin/inventory': typeof AdminInventoryRoute
+  '/admin/payment-accounts': typeof AdminPaymentAccountsRoute
   '/admin/products': typeof AdminProductsRoute
+  '/admin/purchase-returns': typeof AdminPurchaseReturnsRoute
+  '/admin/purchases': typeof AdminPurchasesRoute
   '/admin/repairs': typeof AdminRepairsRoute
+  '/admin/sale-returns': typeof AdminSaleReturnsRoute
+  '/admin/suppliers': typeof AdminSuppliersRoute
+  '/branch/account-transfers': typeof BranchAccountTransfersRoute
   '/branch/billing': typeof BranchBillingRoute
   '/branch/customers': typeof BranchCustomersRoute
+  '/branch/expenses': typeof BranchExpensesRoute
   '/branch/inventory': typeof BranchInventoryRoute
+  '/branch/payment-accounts': typeof BranchPaymentAccountsRoute
   '/branch/products': typeof BranchProductsRoute
+  '/branch/purchase-returns': typeof BranchPurchaseReturnsRoute
+  '/branch/purchases': typeof BranchPurchasesRoute
   '/branch/repairs': typeof BranchRepairsRoute
   '/branch/reports': typeof BranchReportsRoute
+  '/branch/sale-returns': typeof BranchSaleReturnsRoute
+  '/branch/suppliers': typeof BranchSuppliersRoute
   '/admin/': typeof AdminIndexRoute
   '/branch/': typeof BranchIndexRoute
 }
@@ -194,38 +338,70 @@ export interface FileRouteTypes {
     | '/admin'
     | '/branch'
     | '/login'
+    | '/admin/account-transfers'
     | '/admin/billing'
     | '/admin/bills'
     | '/admin/branches'
+    | '/admin/brands'
+    | '/admin/categories'
     | '/admin/customers'
+    | '/admin/expenses'
     | '/admin/inventory'
+    | '/admin/payment-accounts'
     | '/admin/products'
+    | '/admin/purchase-returns'
+    | '/admin/purchases'
     | '/admin/repairs'
+    | '/admin/sale-returns'
+    | '/admin/suppliers'
+    | '/branch/account-transfers'
     | '/branch/billing'
     | '/branch/customers'
+    | '/branch/expenses'
     | '/branch/inventory'
+    | '/branch/payment-accounts'
     | '/branch/products'
+    | '/branch/purchase-returns'
+    | '/branch/purchases'
     | '/branch/repairs'
     | '/branch/reports'
+    | '/branch/sale-returns'
+    | '/branch/suppliers'
     | '/admin/'
     | '/branch/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/admin/account-transfers'
     | '/admin/billing'
     | '/admin/bills'
     | '/admin/branches'
+    | '/admin/brands'
+    | '/admin/categories'
     | '/admin/customers'
+    | '/admin/expenses'
     | '/admin/inventory'
+    | '/admin/payment-accounts'
     | '/admin/products'
+    | '/admin/purchase-returns'
+    | '/admin/purchases'
     | '/admin/repairs'
+    | '/admin/sale-returns'
+    | '/admin/suppliers'
+    | '/branch/account-transfers'
     | '/branch/billing'
     | '/branch/customers'
+    | '/branch/expenses'
     | '/branch/inventory'
+    | '/branch/payment-accounts'
     | '/branch/products'
+    | '/branch/purchase-returns'
+    | '/branch/purchases'
     | '/branch/repairs'
     | '/branch/reports'
+    | '/branch/sale-returns'
+    | '/branch/suppliers'
     | '/admin'
     | '/branch'
   id:
@@ -234,19 +410,35 @@ export interface FileRouteTypes {
     | '/admin'
     | '/branch'
     | '/login'
+    | '/admin/account-transfers'
     | '/admin/billing'
     | '/admin/bills'
     | '/admin/branches'
+    | '/admin/brands'
+    | '/admin/categories'
     | '/admin/customers'
+    | '/admin/expenses'
     | '/admin/inventory'
+    | '/admin/payment-accounts'
     | '/admin/products'
+    | '/admin/purchase-returns'
+    | '/admin/purchases'
     | '/admin/repairs'
+    | '/admin/sale-returns'
+    | '/admin/suppliers'
+    | '/branch/account-transfers'
     | '/branch/billing'
     | '/branch/customers'
+    | '/branch/expenses'
     | '/branch/inventory'
+    | '/branch/payment-accounts'
     | '/branch/products'
+    | '/branch/purchase-returns'
+    | '/branch/purchases'
     | '/branch/repairs'
     | '/branch/reports'
+    | '/branch/sale-returns'
+    | '/branch/suppliers'
     | '/admin/'
     | '/branch/'
   fileRoutesById: FileRoutesById
@@ -302,6 +494,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/branch/suppliers': {
+      id: '/branch/suppliers'
+      path: '/suppliers'
+      fullPath: '/branch/suppliers'
+      preLoaderRoute: typeof BranchSuppliersRouteImport
+      parentRoute: typeof BranchRoute
+    }
+    '/branch/sale-returns': {
+      id: '/branch/sale-returns'
+      path: '/sale-returns'
+      fullPath: '/branch/sale-returns'
+      preLoaderRoute: typeof BranchSaleReturnsRouteImport
+      parentRoute: typeof BranchRoute
+    }
     '/branch/reports': {
       id: '/branch/reports'
       path: '/reports'
@@ -316,6 +522,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BranchRepairsRouteImport
       parentRoute: typeof BranchRoute
     }
+    '/branch/purchases': {
+      id: '/branch/purchases'
+      path: '/purchases'
+      fullPath: '/branch/purchases'
+      preLoaderRoute: typeof BranchPurchasesRouteImport
+      parentRoute: typeof BranchRoute
+    }
+    '/branch/purchase-returns': {
+      id: '/branch/purchase-returns'
+      path: '/purchase-returns'
+      fullPath: '/branch/purchase-returns'
+      preLoaderRoute: typeof BranchPurchaseReturnsRouteImport
+      parentRoute: typeof BranchRoute
+    }
     '/branch/products': {
       id: '/branch/products'
       path: '/products'
@@ -323,11 +543,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BranchProductsRouteImport
       parentRoute: typeof BranchRoute
     }
+    '/branch/payment-accounts': {
+      id: '/branch/payment-accounts'
+      path: '/payment-accounts'
+      fullPath: '/branch/payment-accounts'
+      preLoaderRoute: typeof BranchPaymentAccountsRouteImport
+      parentRoute: typeof BranchRoute
+    }
     '/branch/inventory': {
       id: '/branch/inventory'
       path: '/inventory'
       fullPath: '/branch/inventory'
       preLoaderRoute: typeof BranchInventoryRouteImport
+      parentRoute: typeof BranchRoute
+    }
+    '/branch/expenses': {
+      id: '/branch/expenses'
+      path: '/expenses'
+      fullPath: '/branch/expenses'
+      preLoaderRoute: typeof BranchExpensesRouteImport
       parentRoute: typeof BranchRoute
     }
     '/branch/customers': {
@@ -344,11 +578,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BranchBillingRouteImport
       parentRoute: typeof BranchRoute
     }
+    '/branch/account-transfers': {
+      id: '/branch/account-transfers'
+      path: '/account-transfers'
+      fullPath: '/branch/account-transfers'
+      preLoaderRoute: typeof BranchAccountTransfersRouteImport
+      parentRoute: typeof BranchRoute
+    }
+    '/admin/suppliers': {
+      id: '/admin/suppliers'
+      path: '/suppliers'
+      fullPath: '/admin/suppliers'
+      preLoaderRoute: typeof AdminSuppliersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/sale-returns': {
+      id: '/admin/sale-returns'
+      path: '/sale-returns'
+      fullPath: '/admin/sale-returns'
+      preLoaderRoute: typeof AdminSaleReturnsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/repairs': {
       id: '/admin/repairs'
       path: '/repairs'
       fullPath: '/admin/repairs'
       preLoaderRoute: typeof AdminRepairsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/purchases': {
+      id: '/admin/purchases'
+      path: '/purchases'
+      fullPath: '/admin/purchases'
+      preLoaderRoute: typeof AdminPurchasesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/purchase-returns': {
+      id: '/admin/purchase-returns'
+      path: '/purchase-returns'
+      fullPath: '/admin/purchase-returns'
+      preLoaderRoute: typeof AdminPurchaseReturnsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/products': {
@@ -358,6 +627,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/payment-accounts': {
+      id: '/admin/payment-accounts'
+      path: '/payment-accounts'
+      fullPath: '/admin/payment-accounts'
+      preLoaderRoute: typeof AdminPaymentAccountsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/inventory': {
       id: '/admin/inventory'
       path: '/inventory'
@@ -365,11 +641,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/expenses': {
+      id: '/admin/expenses'
+      path: '/expenses'
+      fullPath: '/admin/expenses'
+      preLoaderRoute: typeof AdminExpensesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/customers': {
       id: '/admin/customers'
       path: '/customers'
       fullPath: '/admin/customers'
       preLoaderRoute: typeof AdminCustomersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/categories': {
+      id: '/admin/categories'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminCategoriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/brands': {
+      id: '/admin/brands'
+      path: '/brands'
+      fullPath: '/admin/brands'
+      preLoaderRoute: typeof AdminBrandsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/branches': {
@@ -393,50 +690,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBillingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/account-transfers': {
+      id: '/admin/account-transfers'
+      path: '/account-transfers'
+      fullPath: '/admin/account-transfers'
+      preLoaderRoute: typeof AdminAccountTransfersRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminAccountTransfersRoute: typeof AdminAccountTransfersRoute
   AdminBillingRoute: typeof AdminBillingRoute
   AdminBillsRoute: typeof AdminBillsRoute
   AdminBranchesRoute: typeof AdminBranchesRoute
+  AdminBrandsRoute: typeof AdminBrandsRoute
+  AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
+  AdminExpensesRoute: typeof AdminExpensesRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
+  AdminPaymentAccountsRoute: typeof AdminPaymentAccountsRoute
   AdminProductsRoute: typeof AdminProductsRoute
+  AdminPurchaseReturnsRoute: typeof AdminPurchaseReturnsRoute
+  AdminPurchasesRoute: typeof AdminPurchasesRoute
   AdminRepairsRoute: typeof AdminRepairsRoute
+  AdminSaleReturnsRoute: typeof AdminSaleReturnsRoute
+  AdminSuppliersRoute: typeof AdminSuppliersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAccountTransfersRoute: AdminAccountTransfersRoute,
   AdminBillingRoute: AdminBillingRoute,
   AdminBillsRoute: AdminBillsRoute,
   AdminBranchesRoute: AdminBranchesRoute,
+  AdminBrandsRoute: AdminBrandsRoute,
+  AdminCategoriesRoute: AdminCategoriesRoute,
   AdminCustomersRoute: AdminCustomersRoute,
+  AdminExpensesRoute: AdminExpensesRoute,
   AdminInventoryRoute: AdminInventoryRoute,
+  AdminPaymentAccountsRoute: AdminPaymentAccountsRoute,
   AdminProductsRoute: AdminProductsRoute,
+  AdminPurchaseReturnsRoute: AdminPurchaseReturnsRoute,
+  AdminPurchasesRoute: AdminPurchasesRoute,
   AdminRepairsRoute: AdminRepairsRoute,
+  AdminSaleReturnsRoute: AdminSaleReturnsRoute,
+  AdminSuppliersRoute: AdminSuppliersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface BranchRouteChildren {
+  BranchAccountTransfersRoute: typeof BranchAccountTransfersRoute
   BranchBillingRoute: typeof BranchBillingRoute
   BranchCustomersRoute: typeof BranchCustomersRoute
+  BranchExpensesRoute: typeof BranchExpensesRoute
   BranchInventoryRoute: typeof BranchInventoryRoute
+  BranchPaymentAccountsRoute: typeof BranchPaymentAccountsRoute
   BranchProductsRoute: typeof BranchProductsRoute
+  BranchPurchaseReturnsRoute: typeof BranchPurchaseReturnsRoute
+  BranchPurchasesRoute: typeof BranchPurchasesRoute
   BranchRepairsRoute: typeof BranchRepairsRoute
   BranchReportsRoute: typeof BranchReportsRoute
+  BranchSaleReturnsRoute: typeof BranchSaleReturnsRoute
+  BranchSuppliersRoute: typeof BranchSuppliersRoute
   BranchIndexRoute: typeof BranchIndexRoute
 }
 
 const BranchRouteChildren: BranchRouteChildren = {
+  BranchAccountTransfersRoute: BranchAccountTransfersRoute,
   BranchBillingRoute: BranchBillingRoute,
   BranchCustomersRoute: BranchCustomersRoute,
+  BranchExpensesRoute: BranchExpensesRoute,
   BranchInventoryRoute: BranchInventoryRoute,
+  BranchPaymentAccountsRoute: BranchPaymentAccountsRoute,
   BranchProductsRoute: BranchProductsRoute,
+  BranchPurchaseReturnsRoute: BranchPurchaseReturnsRoute,
+  BranchPurchasesRoute: BranchPurchasesRoute,
   BranchRepairsRoute: BranchRepairsRoute,
   BranchReportsRoute: BranchReportsRoute,
+  BranchSaleReturnsRoute: BranchSaleReturnsRoute,
+  BranchSuppliersRoute: BranchSuppliersRoute,
   BranchIndexRoute: BranchIndexRoute,
 }
 

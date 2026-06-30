@@ -12,6 +12,14 @@ export interface Branch {
   createdAt: string;
 }
 
+export interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   branchId: string;
@@ -257,6 +265,7 @@ export interface Session {
 }
 
 interface StoreState {
+  admins: Admin[];
   branches: Branch[];
   products: Product[];
   bills: Bill[];
@@ -274,8 +283,11 @@ interface StoreState {
 
 interface StoreCtx extends StoreState {
   session: Session | null;
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; role?: Role; error?: string }>;
   logout: () => void;
+  addAdmin: (a: Omit<Admin, "id" | "createdAt">) => Promise<void>;
+  updateAdmin: (id: string, patch: Partial<Admin>) => Promise<void>;
+  deleteAdmin: (id: string) => Promise<void>;
   addBranch: (b: Omit<Branch, "id" | "createdAt">) => Promise<void>;
   updateBranch: (id: string, patch: Partial<Branch>) => Promise<void>;
   deleteBranch: (id: string) => Promise<void>;
@@ -502,6 +514,7 @@ const brandToDb = (b: Omit<Brand, "id" | "createdAt">) => ({
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>({
+    admins: [],
     branches: [],
     products: [],
     bills: [],
@@ -522,6 +535,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const refreshData = async () => {
     try {
       const [
+        adminsRes,
         branchesRes,
         productsRes,
         billsRes,
@@ -536,6 +550,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         accountTransfersRes,
         brandsRes,
       ] = await Promise.all([
+        supabase.from("admins").select("*").order("created_at", { ascending: false }),
         supabase.from("branches").select("*").order("created_at", { ascending: false }),
         supabase.from("products").select("*").order("created_at", { ascending: false }),
         supabase.from("bills").select("*, items:bill_items(*)").order("created_at", { ascending: false }),
@@ -769,7 +784,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdAt: b.created_at,
       }));
 
+      const mappedAdmins: Admin[] = (adminsRes.data || []).map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        email: a.email,
+        password: a.password,
+        createdAt: a.created_at,
+      }));
+
       setState({
+        admins: mappedAdmins,
         branches: mappedBranches,
         products: mappedProducts,
         bills: mappedBills,
@@ -811,7 +835,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
         const nextSession: Session = { role: "admin", email };
         setSession(nextSession);
-        return { ok: true };
+        return { ok: true, role: "admin" };
+      }
+
+      const { data: admin, error: adminError } = await supabase
+        .from("admins")
+        .select("*")
+        .eq("email", email)
+        .eq("password", password)
+        .maybeSingle();
+
+      if (adminError) {
+        console.error("Supabase admin login error:", adminError);
+      }
+
+      if (admin) {
+        const nextSession: Session = { role: "admin", email };
+        setSession(nextSession);
+        return { ok: true, role: "admin" };
       }
       
       const { data: branch, error } = await supabase
@@ -822,19 +863,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
         
       if (error) {
-        console.error("Supabase login error:", error);
+        console.error("Supabase branch login error:", error);
       }
         
       if (branch) {
         const nextSession: Session = { role: "branch", branchId: branch.id, email };
         setSession(nextSession);
-        return { ok: true };
+        return { ok: true, role: "branch" };
       }
       
       return { ok: false, error: "Invalid credentials" };
     },
     logout: () => {
       setSession(null);
+    },
+    addAdmin: async (a) => {
+      const { error } = await supabase.from("admins").insert([a]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updateAdmin: async (id, patch) => {
+      const { error } = await supabase.from("admins").update(patch).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteAdmin: async (id) => {
+      const { error } = await supabase.from("admins").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
     },
     addBranch: async (b) => {
       const { error } = await supabase.from("branches").insert([b]);

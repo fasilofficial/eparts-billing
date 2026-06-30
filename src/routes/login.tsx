@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useStore, ADMIN_CREDS } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -25,7 +25,7 @@ function LoginPage() {
         toast.error(res.error ?? "Login failed");
         return;
       }
-      await nav({ to: trimmedEmail === ADMIN_CREDS.email ? "/admin" : "/branch" });
+      await nav({ to: res.role === "admin" ? "/admin" : "/branch" });
     } catch {
       toast.error("Could not sign in. Please try again.");
     } finally {

@@ -2,14 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useStore, fmtDate, type Admin } from "@/lib/store";
 import { PageHeader } from "@/components/DashboardLayout";
-import { Plus, Trash2, X, ShieldAlert } from "lucide-react";
+import { Plus, Trash2, Pencil, X, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/administrators")({ component: AdminAdministrators });
 
 function AdminAdministrators() {
-  const { admins, session, addAdmin, deleteAdmin } = useStore();
+  const { admins, session, addAdmin, updateAdmin, deleteAdmin } = useStore();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Admin | null>(null);
 
   return (
     <>
@@ -20,6 +21,7 @@ function AdminAdministrators() {
         actions={
           <button
             onClick={() => {
+              setEditing(null);
               setOpen(true);
             }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
@@ -68,8 +70,19 @@ function AdminAdministrators() {
                   <div className="mt-1 text-xs text-muted-foreground">{admin.email}</div>
                 </div>
                 <div className="flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
+                  <button
+                    onClick={() => {
+                      setEditing(admin);
+                      setOpen(true);
+                    }}
+                    className="rounded-md p-1.5 hover:bg-accent"
+                    aria-label={`Edit ${admin.name}`}
+                    title="Edit administrator"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
                   {isSelf ? (
-                    <span className="rounded bg-accent/50 px-1.5 py-1 text-[10px] font-medium text-muted-foreground">
+                    <span className="rounded bg-accent/50 px-1.5 py-1 text-[10px] font-medium text-muted-foreground flex items-center">
                       You
                     </span>
                   ) : (
@@ -120,14 +133,20 @@ function AdminAdministrators() {
 
       {open && (
         <AdminDialog
+          initial={editing}
           onClose={() => setOpen(false)}
           onSave={async (data) => {
             try {
-              await addAdmin(data);
-              toast.success("Administrator created successfully");
+              if (editing) {
+                await updateAdmin(editing.id, data);
+                toast.success("Administrator updated successfully");
+              } else {
+                await addAdmin(data as Omit<Admin, "id" | "createdAt">);
+                toast.success("Administrator created successfully");
+              }
               setOpen(false);
             } catch (e: any) {
-              toast.error(e.message || "Failed to create administrator");
+              toast.error(e.message || "Failed to save administrator");
             }
           }}
         />
@@ -137,14 +156,16 @@ function AdminAdministrators() {
 }
 
 function AdminDialog({
+  initial,
   onClose,
   onSave,
 }: {
+  initial: Admin | null;
   onClose: () => void;
-  onSave: (d: Omit<Admin, "id" | "createdAt">) => void;
+  onSave: (d: Partial<Admin>) => void;
 }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
   const [password, setPassword] = useState("");
 
   return (
@@ -159,9 +180,9 @@ function AdminDialog({
         <div className="mb-5 flex items-start justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              New
+              {initial ? "Edit" : "New"}
             </div>
-            <h2 className="font-display text-2xl">Create administrator</h2>
+            <h2 className="font-display text-2xl">{initial ? "Edit administrator" : "Create administrator"}</h2>
           </div>
           <button onClick={onClose} className="rounded-md p-1.5 hover:bg-accent">
             <X className="size-4" />
@@ -171,22 +192,34 @@ function AdminDialog({
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            onSave({ name, email, password });
+            const data: Partial<Admin> = { name, email };
+            if (password) {
+              data.password = password;
+            }
+            onSave(data);
           }}
         >
           <Field label="Full Name" value={name} onChange={setName} required />
           <Field label="Email Address" value={email} onChange={setEmail} type="email" required />
-          <Field label="Password" value={password} onChange={setPassword} type="password" required />
+          <Field 
+            label={initial ? "Password (leave blank to keep current)" : "Password"} 
+            value={password} 
+            onChange={setPassword} 
+            type="password" 
+            required={!initial} 
+          />
           
           <div className="rounded-md bg-accent/20 p-3 text-xs text-muted-foreground">
-            Make sure to save these credentials securely. The new administrator will have full access to billing, branches, and system data.
+            {initial 
+              ? "Leave the password field blank if you do not wish to change it."
+              : "Make sure to save these credentials securely. The new administrator will have full access to billing, branches, and system data."}
           </div>
 
           <button
             type="submit"
             className="w-full rounded-md bg-ink py-2.5 text-sm text-paper hover:opacity-90 mt-2"
           >
-            Create administrator
+            {initial ? "Save changes" : "Create administrator"}
           </button>
         </form>
       </div>

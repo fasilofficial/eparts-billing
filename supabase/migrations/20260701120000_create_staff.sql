@@ -16,3 +16,26 @@ CREATE INDEX IF NOT EXISTS idx_staff_branch_id ON staff(branch_id);
 -- Alter repair_items table to link to staff
 ALTER TABLE repair_items 
 ADD COLUMN IF NOT EXISTS assigned_to_id UUID REFERENCES staff(id) ON DELETE SET NULL;
+
+-- Create repairs storage bucket if not exists
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('repairs', 'repairs', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policy to allow public uploads
+CREATE POLICY "Allow public upload"
+ON storage.objects FOR INSERT
+TO public
+WITH CHECK (bucket_id = 'repairs');
+
+-- Policy to allow public reads
+CREATE POLICY "Allow public read"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'repairs');
+
+-- Policy to allow public deletes
+CREATE POLICY "Allow public delete"
+ON storage.objects FOR DELETE
+TO public
+USING (bucket_id = 'repairs');

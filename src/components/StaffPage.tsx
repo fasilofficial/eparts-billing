@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, type Staff, type Repair, type RepairItem } from "@/lib/store";
 import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, UserCheck, Phone, Mail, Award, Landmark } from "lucide-react";
 import { toast } from "sonner";
+import { ImageLightbox } from "./ImageLightbox";
 
 interface StaffFormData {
   branchId: string;
@@ -42,6 +43,15 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedStaff, setExpandedStaff] = useState<Record<string, boolean>>({});
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    photos: string[];
+    currentIndex: number;
+  }>({
+    isOpen: false,
+    photos: [],
+    currentIndex: 0,
+  });
 
   const filteredStaff = useMemo(() => {
     return staff.filter((s) => {
@@ -277,6 +287,39 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                               <span>· Due: {item.expectedCompletionDate}</span>
                             )}
                           </div>
+                          {item.photos && item.photos.length > 0 && (
+                            <div className="mt-2.5 space-y-1">
+                              <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Attached Photos:</div>
+                              <div className="flex flex-wrap gap-2">
+                                {item.photos.map((photo, pIdx) => {
+                                  const isUrl = photo.startsWith("http");
+                                  return isUrl ? (
+                                    <button
+                                      key={pIdx}
+                                      type="button"
+                                      onClick={() => {
+                                        const urls = repair.items.flatMap((it) => it.photos).filter((p) => p.startsWith("http"));
+                                        const idx = urls.indexOf(photo);
+                                        setLightbox({
+                                          isOpen: true,
+                                          photos: urls,
+                                          currentIndex: idx >= 0 ? idx : 0,
+                                        });
+                                      }}
+                                      className="block size-14 rounded-md border border-border overflow-hidden bg-muted hover:opacity-80 transition"
+                                      title="Click to preview image"
+                                    >
+                                      <img src={photo} alt="" className="size-full object-cover" />
+                                    </button>
+                                  ) : (
+                                    <span key={pIdx} className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-mono border border-border text-muted-foreground">
+                                      📄 {photo} (Legacy)
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -328,6 +371,14 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
           onSave={handleSave}
         />
       )}
+
+      <ImageLightbox
+        isOpen={lightbox.isOpen}
+        photos={lightbox.photos}
+        currentIndex={lightbox.currentIndex}
+        onClose={() => setLightbox((prev) => ({ ...prev, isOpen: false }))}
+        onChangeIndex={(idx) => setLightbox((prev) => ({ ...prev, currentIndex: idx }))}
+      />
     </>
   );
 }

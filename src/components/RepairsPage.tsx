@@ -3,10 +3,12 @@ import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, fmtDate, fmtMoney, type Repair, type RepairItem } from "@/lib/store";
 import { Pencil, Plus, Trash2, Wrench, X } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { ImageLightbox } from "./ImageLightbox";
 
 const defaultIssues = ["Screen Broken", "Battery Issue", "Charging Problem", "Water Damage"];
 
-type DraftItem = RepairItem & { draftIssue: string };
+type DraftItem = RepairItem & { draftIssue: string; newFiles?: File[] };
 type RepairFormData = {
   branchId: string;
   customerId?: string;
@@ -39,6 +41,15 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Repair | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    photos: string[];
+    currentIndex: number;
+  }>({
+    isOpen: false,
+    photos: [],
+    currentIndex: 0,
+  });
 
   const closeDialog = () => {
     setOpen(false);
@@ -169,6 +180,39 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                       {item.issues.join(", ")}
                       {item.serialNumber && <span> · SN {item.serialNumber}</span>}
                     </div>
+                    {item.photos && item.photos.length > 0 && (
+                      <div className="mt-2.5 space-y-1">
+                        <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Attached Photos:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {item.photos.map((photo, pIdx) => {
+                            const isUrl = photo.startsWith("http");
+                            return isUrl ? (
+                              <button
+                                key={pIdx}
+                                type="button"
+                                onClick={() => {
+                                  const urls = repair.items.flatMap((it) => it.photos).filter((p) => p.startsWith("http"));
+                                  const idx = urls.indexOf(photo);
+                                  setLightbox({
+                                    isOpen: true,
+                                    photos: urls,
+                                    currentIndex: idx >= 0 ? idx : 0,
+                                  });
+                                }}
+                                className="block size-14 rounded-md border border-border overflow-hidden bg-muted hover:opacity-80 transition"
+                                title="Click to preview image"
+                              >
+                                <img src={photo} alt="" className="size-full object-cover" />
+                              </button>
+                            ) : (
+                              <span key={pIdx} className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-mono border border-border text-muted-foreground">
+                                📄 {photo} (Legacy)
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -206,6 +250,14 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           }}
         />
       )}
+
+      <ImageLightbox
+        isOpen={lightbox.isOpen}
+        photos={lightbox.photos}
+        currentIndex={lightbox.currentIndex}
+        onClose={() => setLightbox((prev) => ({ ...prev, isOpen: false }))}
+        onChangeIndex={(idx) => setLightbox((prev) => ({ ...prev, currentIndex: idx }))}
+      />
     </>
   );
 }
@@ -235,6 +287,7 @@ function RepairDialog({
   const [items, setItems] = useState<DraftItem[]>(
     initial?.items.length ? initial.items.map((item) => ({ ...item, draftIssue: "" })) : [emptyItem()],
   );
+  const [uploading, setUploading] = useState(false);
 
   const branchStaff = useMemo(() => {
     return staff.filter((s) => s.branchId === branchId && s.status === "Active");
@@ -250,23 +303,10 @@ function RepairDialog({
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   };
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!branchId) {
       toast.error("Select a branch");
-      return;
-    }
-    const cleanItems = items.map(({ draftIssue, ...item }) => ({
-      ...item,
-      brand: item.brand.trim(),
-      item: item.item.trim(),
-      quantity: Number(item.quantity) || 1,
-      estimatedCost: item.estimatedCost == null ? undefined : Number(item.estimatedCost),
-      serviceCost: item.serviceCost == null ? undefined : Number(item.serviceCost),
-      issues: item.issues.filter(Boolean),
-    }));
-    if (cleanItems.some((item) => !item.brand || !item.item || item.issues.length === 0)) {
-      toast.error("Every item needs brand, item name, and at least one issue");
       return;
     }
     const customerName = selectedCustomer?.name || customerQuery.trim();
@@ -274,7 +314,68 @@ function RepairDialog({
       toast.error("Select or type a customer");
       return;
     }
-    onSave({ branchId, customerId: selectedCustomer?.id, customerName, status, items: cleanItems });
+
+    if (items.some((item) => !item.brand.trim() || !item.item.trim() || item.issues.filter(Boolean).length === 0)) {
+      toast.error("Every item needs brand, item name, and at least one issue");
+      return;
+    }
+
+    setUploading(true);
+    const toastId = toast.loading("Uploading images...");
+
+    try {
+      const cleanItems = await Promise.all(items.map(async ({ draftIssue, newFiles, ...item }) => {
+        let photos = [...(item.photos || [])];
+
+        if (newFiles && newFiles.length > 0) {
+          const uploadPromises = newFiles.map(async (file) => {
+            const fileExt = file.name.split('.').pop();
+            const uniqueId = Math.random().toString(36).substring(2, 9);
+            const fileName = `${uniqueId}-${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error } = await supabase.storage
+              .from("repairs")
+              .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+            if (error) throw error;
+
+            const { data: urlData } = supabase.storage
+              .from("repairs")
+              .getPublicUrl(filePath);
+
+            return { originalName: file.name, publicUrl: urlData.publicUrl };
+          });
+
+          const uploadedFiles = await Promise.all(uploadPromises);
+
+          // Replace local filenames with their public URLs in the photos array
+          photos = photos.map((photo) => {
+            const uploaded = uploadedFiles.find((u) => u.originalName === photo);
+            return uploaded ? uploaded.publicUrl : photo;
+          });
+        }
+
+        return {
+          ...item,
+          brand: item.brand.trim(),
+          item: item.item.trim(),
+          quantity: Number(item.quantity) || 1,
+          estimatedCost: item.estimatedCost == null ? undefined : Number(item.estimatedCost),
+          serviceCost: item.serviceCost == null ? undefined : Number(item.serviceCost),
+          issues: item.issues.filter(Boolean),
+          photos,
+        };
+      }));
+
+      toast.dismiss(toastId);
+      onSave({ branchId, customerId: selectedCustomer?.id, customerName, status, items: cleanItems });
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(`Image upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -293,7 +394,7 @@ function RepairDialog({
         </div>
 
         <form className="grid gap-5" onSubmit={submit}>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 items-start">
             {isAdmin && (
               <label className="grid gap-1.5">
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">Branch *</span>
@@ -420,21 +521,82 @@ function RepairDialog({
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <IssuePicker item={item} onChange={(patch) => updateItem(index, patch)} />
-                  <label className="grid gap-1.5">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">Photos (up to 10)</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      capture="environment"
-                      onChange={(e) => {
-                        const names = Array.from(e.target.files || []).slice(0, 10).map((file) => file.name);
-                        updateItem(index, { photos: names });
-                      }}
-                      className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
-                    />
-                    {item.photos.length > 0 && <span className="text-xs text-muted-foreground">{item.photos.length} selected</span>}
-                  </label>
+                  <div className="grid gap-2">
+                    <label className="grid gap-1.5">
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Add Photos (up to 10)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        capture="environment"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []).slice(0, 10);
+                          const existingPhotos = item.photos || [];
+                          const newNames = files.map((file) => file.name);
+                          updateItem(index, {
+                            photos: [...existingPhotos, ...newNames],
+                            newFiles: [...(item.newFiles || []), ...files]
+                          });
+                        }}
+                        className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+                      />
+                    </label>
+
+                    {((item.photos && item.photos.length > 0) || (item.newFiles && item.newFiles.length > 0)) && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {item.photos && item.photos
+                          .filter((photo) => !item.newFiles?.some((f) => f.name === photo))
+                          .map((photo, pIdx) => {
+                            const isUrl = photo.startsWith("http");
+                          return (
+                            <div key={`existing-${pIdx}`} className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted">
+                              {isUrl ? (
+                                <img src={photo} alt="" className="size-full object-cover" />
+                              ) : (
+                                <div className="size-full flex flex-col items-center justify-center p-1 text-[8px] text-center text-muted-foreground break-all">
+                                  <span>📄</span>
+                                  <span className="truncate w-full">{photo}</span>
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedPhotos = item.photos.filter((_, i) => i !== pIdx);
+                                  updateItem(index, { photos: updatedPhotos });
+                                }}
+                                className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
+                                title="Remove photo"
+                              >
+                                <X className="size-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        {item.newFiles && item.newFiles.map((file, fIdx) => {
+                          const localUrl = URL.createObjectURL(file);
+                          return (
+                            <div key={`new-${fIdx}`} className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted">
+                              <img src={localUrl} alt="" className="size-full object-cover" />
+                              <span className="absolute bottom-0 inset-x-0 bg-ink/60 text-[8px] text-paper text-center truncate py-0.5">New</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedNewFiles = item.newFiles?.filter((_, i) => i !== fIdx) || [];
+                                  const updatedPhotos = item.photos.filter((p) => p !== file.name);
+                                  updateItem(index, { newFiles: updatedNewFiles, photos: updatedPhotos });
+                                }}
+                                className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
+                                title="Remove photo"
+                              >
+                                <X className="size-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <label className="mt-4 grid gap-1.5">
@@ -449,8 +611,8 @@ function RepairDialog({
             <button type="button" onClick={() => setItems((prev) => [...prev, emptyItem()])} className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">
               <Plus className="size-4" /> Add another item
             </button>
-            <button type="submit" className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:ml-auto">
-              {initial ? "Save changes" : "Create repair"}
+            <button type="submit" disabled={uploading} className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:ml-auto disabled:opacity-50">
+              {uploading ? "Uploading..." : (initial ? "Save changes" : "Create repair")}
             </button>
           </div>
         </form>

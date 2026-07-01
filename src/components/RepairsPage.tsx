@@ -227,6 +227,7 @@ function RepairDialog({
   onClose: () => void;
   onSave: (data: RepairFormData) => void;
 }) {
+  const { staff } = useStore();
   const [branchId, setBranchId] = useState(initial?.branchId ?? defaultBranchId);
   const [customerQuery, setCustomerQuery] = useState(initial?.customerName ?? "");
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
@@ -234,6 +235,10 @@ function RepairDialog({
   const [items, setItems] = useState<DraftItem[]>(
     initial?.items.length ? initial.items.map((item) => ({ ...item, draftIssue: "" })) : [emptyItem()],
   );
+
+  const branchStaff = useMemo(() => {
+    return staff.filter((s) => s.branchId === branchId && s.status === "Active");
+  }, [staff, branchId]);
 
   const branchCustomers = customers.filter((customer) => customer.branchId === branchId);
   const selectedCustomer = customers.find((customer) => customer.id === customerId);
@@ -378,11 +383,32 @@ function RepairDialog({
                   <Field label="Service cost" type="number" step="0.01" value={String(item.serviceCost ?? "")} onChange={(value) => updateItem(index, { serviceCost: value === "" ? undefined : Number(value) })} />
                   <label className="grid gap-1.5">
                     <span className="text-xs uppercase tracking-wider text-muted-foreground">Assigned to</span>
-                    <select value={item.assignedTo} onChange={(e) => updateItem(index, { assignedTo: e.target.value })} className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink">
-                      <option>Unassigned</option>
-                      {branches.map((branch) => (
-                        <option key={branch.id}>{branch.name} team</option>
+                    <select
+                      value={item.assignedToId || (item.assignedTo !== "Unassigned" ? item.assignedTo : "Unassigned")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "Unassigned") {
+                          updateItem(index, { assignedTo: "Unassigned", assignedToId: undefined });
+                        } else {
+                          const selected = branchStaff.find((s) => s.id === val);
+                          if (selected) {
+                            updateItem(index, { assignedTo: selected.name, assignedToId: selected.id });
+                          }
+                        }
+                      }}
+                      className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+                    >
+                      <option value="Unassigned">Unassigned</option>
+                      {branchStaff.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} {s.role ? `(${s.role})` : ""}
+                        </option>
                       ))}
+                      {item.assignedTo && item.assignedTo !== "Unassigned" && !branchStaff.some((s) => s.id === item.assignedToId) && (
+                        <option value={item.assignedTo} disabled>
+                          {item.assignedTo} (Legacy)
+                        </option>
+                      )}
                     </select>
                   </label>
                   <Field label="Expected completion" type="date" value={item.expectedCompletionDate ?? ""} onChange={(value) => updateItem(index, { expectedCompletionDate: value })} />

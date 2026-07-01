@@ -229,6 +229,17 @@ export interface Customer {
   createdAt: string;
 }
 
+export interface Staff {
+  id: string;
+  branchId: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  role?: string;
+  status: "Active" | "Inactive";
+  createdAt: string;
+}
+
 export interface RepairItem {
   id?: string;
   repairId?: string;
@@ -243,6 +254,7 @@ export interface RepairItem {
   estimatedCost?: number;
   serviceCost?: number;
   assignedTo: string;
+  assignedToId?: string;
   expectedCompletionDate?: string;
 }
 
@@ -279,6 +291,7 @@ interface StoreState {
   paymentAccounts: PaymentAccount[];
   accountTransfers: AccountTransfer[];
   brands: Brand[];
+  staff: Staff[];
 }
 
 interface StoreCtx extends StoreState {
@@ -325,6 +338,9 @@ interface StoreCtx extends StoreState {
   addBrand: (b: Omit<Brand, "id" | "createdAt">) => Promise<void>;
   updateBrand: (id: string, patch: Omit<Brand, "id" | "createdAt">) => Promise<void>;
   deleteBrand: (id: string) => Promise<void>;
+  addStaff: (s: Omit<Staff, "id" | "createdAt">) => Promise<void>;
+  updateStaff: (id: string, patch: Partial<Omit<Staff, "id" | "createdAt">>) => Promise<void>;
+  deleteStaff: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -379,6 +395,7 @@ const repairItemsToDb = (repairId: string, items: RepairItem[]) =>
     estimated_cost: item.estimatedCost ?? null,
     service_cost: item.serviceCost ?? null,
     assigned_to: item.assignedTo || "Unassigned",
+    assigned_to_id: item.assignedToId || null,
     expected_completion_date: item.expectedCompletionDate || null,
   }));
 
@@ -528,6 +545,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     paymentAccounts: [],
     accountTransfers: [],
     brands: [],
+    staff: [],
   });
   const [session, setSession] = useState<Session | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -549,6 +567,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         paymentAccountsRes,
         accountTransfersRes,
         brandsRes,
+        staffRes,
       ] = await Promise.all([
         supabase.from("admins").select("*").order("created_at", { ascending: false }),
         supabase.from("branches").select("*").order("created_at", { ascending: false }),
@@ -564,6 +583,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         supabase.from("payment_accounts").select("*").order("created_at", { ascending: false }),
         supabase.from("account_transfers").select("*").order("created_at", { ascending: false }),
         supabase.from("brands").select("*").order("created_at", { ascending: false }),
+        supabase.from("staff").select("*").order("created_at", { ascending: false }),
       ]);
 
       const mappedBranches: Branch[] = (branchesRes.data || []).map((b: any) => ({
@@ -651,6 +671,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           estimatedCost: i.estimated_cost == null ? undefined : Number(i.estimated_cost),
           serviceCost: i.service_cost == null ? undefined : Number(i.service_cost),
           assignedTo: i.assigned_to ?? "Unassigned",
+          assignedToId: i.assigned_to_id ?? undefined,
           expectedCompletionDate: i.expected_completion_date ?? undefined,
         }))
       }));
@@ -792,6 +813,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdAt: a.created_at,
       }));
 
+      const mappedStaff: Staff[] = (staffRes.data || []).map((s: any) => ({
+        id: s.id,
+        branchId: s.branch_id,
+        name: s.name,
+        phone: s.phone ?? undefined,
+        email: s.email ?? undefined,
+        role: s.role ?? undefined,
+        status: s.status ?? "Active",
+        createdAt: s.created_at,
+      }));
+
       setState({
         admins: mappedAdmins,
         branches: mappedBranches,
@@ -807,6 +839,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         paymentAccounts: mappedPaymentAccounts,
         accountTransfers: mappedAccountTransfers,
         brands: mappedBrands,
+        staff: mappedStaff,
       });
     } catch (err) {
       console.error("Failed to fetch from supabase", err);
@@ -1223,6 +1256,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteBrand: async (id) => {
       const { error } = await supabase.from("brands").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    addStaff: async (s) => {
+      const { error } = await supabase.from("staff").insert([{
+        branch_id: s.branchId,
+        name: s.name,
+        phone: s.phone || null,
+        email: s.email || null,
+        role: s.role || null,
+        status: s.status,
+      }]);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    updateStaff: async (id, patch) => {
+      const { error } = await supabase.from("staff").update({
+        branch_id: patch.branchId,
+        name: patch.name,
+        phone: patch.phone || null,
+        email: patch.email || null,
+        role: patch.role || null,
+        status: patch.status,
+      }).eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteStaff: async (id) => {
+      const { error } = await supabase.from("staff").delete().eq("id", id);
       if (error) throw new Error(error.message);
       await refreshData();
     },

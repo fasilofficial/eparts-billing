@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { DashboardLayout, type NavItem } from "@/components/DashboardLayout";
-import { LayoutDashboard, Package, Boxes, ReceiptText, BarChart3, Users, Wrench, Truck, ShoppingCart, WalletCards, RotateCcw, Landmark, ArrowLeftRight } from "lucide-react";
+import { LayoutDashboard, UserCog, Package, Boxes, ReceiptText, BarChart3, Users, Wrench, Truck, ShoppingCart, WalletCards, RotateCcw, Landmark, ArrowLeftRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 
 const items: NavItem[] = [
@@ -8,6 +8,7 @@ const items: NavItem[] = [
   { to: "/branch/customers", label: "Customers", icon: Users },
   { to: "/branch/suppliers", label: "Suppliers", icon: Truck },
   { to: "/branch/repairs", label: "Repairs", icon: Wrench },
+  { to: "/branch/staff", label: "Staff & Workload", icon: UserCog },
   { to: "/branch/purchases", label: "Purchases", icon: ShoppingCart },
   { to: "/branch/purchase-returns", label: "Purchase Returns", icon: RotateCcw },
   { to: "/branch/expenses", label: "Expenses", icon: WalletCards },

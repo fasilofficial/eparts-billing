@@ -3,13 +3,24 @@ import { PageHeader, Stat } from "@/components/DashboardLayout";
 import { useStore, fmtMoney, type AccountTransfer } from "@/lib/store";
 import { ArrowLeftRight, Plus, Trash2, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, paymentAccounts, accountTransfers, addAccountTransfer, deleteAccountTransfer } = useStore();
+  const {
+    session,
+    branches,
+    paymentAccounts,
+    accountTransfers,
+    addAccountTransfer,
+    deleteAccountTransfer,
+  } = useStore();
+  const confirm = useConfirm();
   const isAdmin = mode === "admin";
-  const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const defaultBranchId = isAdmin
+    ? session?.defaultBranchId || branches[0]?.id || ""
+    : session?.branchId || "";
   const [branchId, setBranchId] = useState(defaultBranchId);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -28,7 +39,9 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
   const thisMonthTransfers = scoped.filter((t) => {
     const transferDate = new Date(t.transferDate);
     const now = new Date();
-    return transferDate.getMonth() === now.getMonth() && transferDate.getFullYear() === now.getFullYear();
+    return (
+      transferDate.getMonth() === now.getMonth() && transferDate.getFullYear() === now.getFullYear()
+    );
   }).length;
   const avg = scoped.length ? total / scoped.length : 0;
 
@@ -51,7 +64,11 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-fade-in">
         <Stat label="Total Transfers" value={String(scoped.length)} hint="Number of transactions" />
         <Stat label="Total Amount" value={fmtMoney(total)} hint="Aggregate sum transferred" />
-        <Stat label="This Month" value={String(thisMonthTransfers)} hint="Transfers this calendar month" />
+        <Stat
+          label="This Month"
+          value={String(thisMonthTransfers)}
+          hint="Transfers this calendar month"
+        />
         <Stat label="Avg Transfer" value={fmtMoney(avg)} hint="Average transfer value" />
       </div>
 
@@ -86,7 +103,9 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
             <ArrowLeftRight className="size-6 text-muted-foreground animate-pulse" />
           </div>
           <h2 className="mt-4 text-base font-semibold">No transfers found</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Get started by creating your first transfer</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Get started by creating your first transfer
+          </p>
           <button
             onClick={() => setOpen(true)}
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft"
@@ -118,14 +137,24 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
                       </div>
                     )}
                   </td>
-                  <td className="px-5 py-3.5 font-medium text-foreground/80">{t.fromAccountName}</td>
+                  <td className="px-5 py-3.5 font-medium text-foreground/80">
+                    {t.fromAccountName}
+                  </td>
                   <td className="px-5 py-3.5 font-medium text-foreground/80">{t.toAccountName}</td>
                   <td className="px-5 py-3.5 text-muted-foreground num">{t.transferDate}</td>
-                  <td className="px-5 py-3.5 text-right font-bold num text-foreground/90">{fmtMoney(t.transferAmount)}</td>
+                  <td className="px-5 py-3.5 text-right font-bold num text-foreground/90">
+                    {fmtMoney(t.transferAmount)}
+                  </td>
                   <td className="px-5 py-3.5 text-right">
                     <button
                       onClick={async () => {
-                        if (!confirm(`Delete transfer ${t.referenceNumber}?`)) return;
+                        if (
+                          !(await confirm({
+                            title: "Delete transfer?",
+                            description: `Are you sure you want to delete transfer ${t.referenceNumber}?`,
+                          }))
+                        )
+                          return;
                         try {
                           await deleteAccountTransfer(t.id);
                           toast.success("Transfer deleted");
@@ -184,7 +213,9 @@ function TransferDialog({
   accounts: { id: string; branchId: string; accountName: string; status: string }[];
   count: number;
   onClose: () => void;
-  onSave: (data: Omit<AccountTransfer, "id" | "createdAt" | "fromAccountName" | "toAccountName">) => void;
+  onSave: (
+    data: Omit<AccountTransfer, "id" | "createdAt" | "fromAccountName" | "toAccountName">,
+  ) => void;
 }) {
   const [branchId, setBranchId] = useState(initialBranchId);
   const [fromAccountId, setFromAccountId] = useState("");
@@ -213,8 +244,10 @@ function TransferDialog({
       toast.error("Transfer amount must be greater than zero");
       return;
     }
-    
-    const autoRef = referenceNumber.trim() || `TRF-${new Date().getFullYear()}-${String(count + 1).padStart(3, "0")}`;
+
+    const autoRef =
+      referenceNumber.trim() ||
+      `TRF-${new Date().getFullYear()}-${String(count + 1).padStart(3, "0")}`;
 
     onSave({
       branchId,
@@ -261,7 +294,9 @@ function TransferDialog({
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 flex items-start gap-2.5">
               <AlertCircle className="size-5 shrink-0 text-amber-600 mt-0.5" />
               <div>
-                <span className="font-semibold">Notice:</span> You need at least 2 active accounts in this branch to execute a transfer. Currently, there are only {activeAccounts.length} active account(s) registered.
+                <span className="font-semibold">Notice:</span> You need at least 2 active accounts
+                in this branch to execute a transfer. Currently, there are only{" "}
+                {activeAccounts.length} active account(s) registered.
               </div>
             </div>
           )}

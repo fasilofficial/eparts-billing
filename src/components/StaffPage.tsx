@@ -1,8 +1,20 @@
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, type Staff, type Repair, type RepairItem } from "@/lib/store";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, UserCheck, Phone, Mail, Award, Landmark } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  UserCheck,
+  Phone,
+  Mail,
+  Award,
+  Landmark,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { ImageLightbox } from "./ImageLightbox";
 import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 
@@ -25,19 +37,14 @@ const emptyStaffForm = (defaultBranchId: string): StaffFormData => ({
 });
 
 export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
-  const {
-    session,
-    branches,
-    staff,
-    repairs,
-    addStaff,
-    updateStaff,
-    deleteStaff,
-    updateRepair,
-  } = useStore();
+  const { session, branches, staff, repairs, addStaff, updateStaff, deleteStaff, updateRepair } =
+    useStore();
+  const confirm = useConfirm();
 
   const isAdmin = mode === "admin";
-  const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const defaultBranchId = isAdmin
+    ? session?.defaultBranchId || branches[0]?.id || ""
+    : session?.branchId || "";
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
@@ -107,7 +114,13 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
   };
 
   const handleDelete = async (s: Staff) => {
-    if (!confirm(`Are you sure you want to delete ${s.name}?`)) return;
+    if (
+      !(await confirm({
+        title: "Delete staff member?",
+        description: `Are you sure you want to delete ${s.name}?`,
+      }))
+    )
+      return;
     try {
       await deleteStaff(s.id);
       toast.success("Staff member removed");
@@ -191,7 +204,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
         actions={
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <ExportExcelButton
-              filename={`staff-workload-report-${new Date().toISOString().split('T')[0]}`}
+              filename={`staff-workload-report-${new Date().toISOString().split("T")[0]}`}
               headers={exportHeaders}
               rows={exportRows}
             />
@@ -258,7 +271,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
           const branch = branches.find((b) => b.id === s.branchId);
           const workload = getStaffWorkload(s.id);
           const activeWorkload = workload.filter(
-            (w) => w.repair.status !== "Delivered" && w.repair.status !== "Cancelled"
+            (w) => w.repair.status !== "Delivered" && w.repair.status !== "Cancelled",
           );
           const isExpanded = !!expandedStaff[s.id];
 
@@ -305,7 +318,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
 
                 <div className="flex shrink-0 items-center gap-3 sm:text-right">
                   <div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Active Workload</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Active Workload
+                    </div>
                     <div className="num text-lg font-bold">
                       {activeWorkload.length} task{activeWorkload.length !== 1 && "s"}
                     </div>
@@ -343,9 +358,15 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                 >
                   <span className="flex items-center gap-2">
                     <Award className="size-4" />
-                    {isExpanded ? "Hide Assigned Tasks" : `View Assigned Tasks (${workload.length})`}
+                    {isExpanded
+                      ? "Hide Assigned Tasks"
+                      : `View Assigned Tasks (${workload.length})`}
                   </span>
-                  {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                  {isExpanded ? (
+                    <ChevronUp className="size-4" />
+                  ) : (
+                    <ChevronDown className="size-4" />
+                  )}
                 </button>
 
                 {isExpanded && (
@@ -373,7 +394,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                           </div>
                           {item.photos && item.photos.length > 0 && (
                             <div className="mt-2.5 space-y-1">
-                              <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Attached Photos:</div>
+                              <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                                Attached Photos:
+                              </div>
                               <div className="flex flex-wrap gap-2">
                                 {item.photos.map((photo, pIdx) => {
                                   const isUrl = photo.startsWith("http");
@@ -382,7 +405,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                                       key={pIdx}
                                       type="button"
                                       onClick={() => {
-                                        const urls = repair.items.flatMap((it) => it.photos).filter((p) => p.startsWith("http"));
+                                        const urls = repair.items
+                                          .flatMap((it) => it.photos)
+                                          .filter((p) => p.startsWith("http"));
                                         const idx = urls.indexOf(photo);
                                         setLightbox({
                                           isOpen: true,
@@ -396,7 +421,10 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                                       <img src={photo} alt="" className="size-full object-cover" />
                                     </button>
                                   ) : (
-                                    <span key={pIdx} className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-mono border border-border text-muted-foreground">
+                                    <span
+                                      key={pIdx}
+                                      className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-mono border border-border text-muted-foreground"
+                                    >
                                       📄 {photo} (Legacy)
                                     </span>
                                   );
@@ -407,7 +435,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase tracking-wider text-muted-foreground">Status:</span>
+                          <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                            Status:
+                          </span>
                           <select
                             value={repair.status}
                             onChange={(e) => handleStatusChange(repair, e.target.value)}
@@ -523,7 +553,9 @@ function StaffDialog({
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
               {initial ? "Edit Profile" : "New Registration"}
             </div>
-            <h2 className="font-display text-2xl">{initial ? "Edit staff member" : "Add staff member"}</h2>
+            <h2 className="font-display text-2xl">
+              {initial ? "Edit staff member" : "Add staff member"}
+            </h2>
           </div>
           <button
             type="button"
@@ -537,7 +569,9 @@ function StaffDialog({
         <form onSubmit={handleSubmit} className="grid gap-4">
           {isAdmin && (
             <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Branch *</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Branch *
+              </span>
               <select
                 required
                 value={branchId}
@@ -555,7 +589,9 @@ function StaffDialog({
           )}
 
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Full Name *</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Full Name *
+            </span>
             <input
               required
               type="text"
@@ -567,7 +603,9 @@ function StaffDialog({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Role / Title</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Role / Title
+            </span>
             <input
               type="text"
               value={role}
@@ -578,7 +616,9 @@ function StaffDialog({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Phone Number</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Phone Number
+            </span>
             <input
               type="tel"
               value={phone}
@@ -589,7 +629,9 @@ function StaffDialog({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Email Address</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Email Address
+            </span>
             <input
               type="email"
               value={email}
@@ -600,7 +642,9 @@ function StaffDialog({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Status</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Status
+            </span>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as "Active" | "Inactive")}

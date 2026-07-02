@@ -4,6 +4,7 @@ import { useStore, fmtDate, type Admin } from "@/lib/store";
 import { PageHeader } from "@/components/DashboardLayout";
 import { Plus, Trash2, Pencil, X, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/admin/administrators")({ component: AdminAdministrators });
 
@@ -11,6 +12,7 @@ function AdminAdministrators() {
   const { admins, session, addAdmin, updateAdmin, deleteAdmin } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Admin | null>(null);
+  const confirm = useConfirm();
 
   return (
     <>
@@ -33,29 +35,34 @@ function AdminAdministrators() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {/* Render Environment-Variable Legacy Admin as read-only card if it's not already in db */}
-        {import.meta.env.VITE_ADMIN_EMAIL && !admins.some(a => a.email === import.meta.env.VITE_ADMIN_EMAIL) && (
-          <article className="group rounded-xl border border-dashed border-border bg-card/50 p-5 transition hover:shadow-soft">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="font-display text-2xl leading-tight">System Owner</div>
-                  <span className="inline-flex items-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">Env-based</span>
+        {import.meta.env.VITE_ADMIN_EMAIL &&
+          !admins.some((a) => a.email === import.meta.env.VITE_ADMIN_EMAIL) && (
+            <article className="group rounded-xl border border-dashed border-border bg-card/50 p-5 transition hover:shadow-soft">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-display text-2xl leading-tight">System Owner</div>
+                    <span className="inline-flex items-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      Env-based
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {import.meta.env.VITE_ADMIN_EMAIL}
+                  </div>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">{import.meta.env.VITE_ADMIN_EMAIL}</div>
               </div>
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <div className="text-muted-foreground">Privileges</div>
-                <div className="text-sm font-medium">Full Access (Root)</div>
+              <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-muted-foreground">Privileges</div>
+                  <div className="text-sm font-medium">Full Access (Root)</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Status</div>
+                  <div className="text-sm text-green-600 font-medium">Read-Only</div>
+                </div>
               </div>
-              <div>
-                <div className="text-muted-foreground">Status</div>
-                <div className="text-sm text-green-600 font-medium">Read-Only</div>
-              </div>
-            </div>
-          </article>
-        )}
+            </article>
+          )}
 
         {admins.map((admin) => {
           const isSelf = session?.email === admin.email;
@@ -88,7 +95,12 @@ function AdminAdministrators() {
                   ) : (
                     <button
                       onClick={async () => {
-                        if (confirm(`Are you sure you want to delete administrator ${admin.name}?`)) {
+                        if (
+                          await confirm({
+                            title: "Delete administrator?",
+                            description: `Are you sure you want to delete administrator ${admin.name}?`,
+                          })
+                        ) {
                           try {
                             await deleteAdmin(admin.id);
                             toast.success("Administrator removed");
@@ -182,7 +194,9 @@ function AdminDialog({
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
               {initial ? "Edit" : "New"}
             </div>
-            <h2 className="font-display text-2xl">{initial ? "Edit administrator" : "Create administrator"}</h2>
+            <h2 className="font-display text-2xl">
+              {initial ? "Edit administrator" : "Create administrator"}
+            </h2>
           </div>
           <button onClick={onClose} className="rounded-md p-1.5 hover:bg-accent">
             <X className="size-4" />
@@ -201,16 +215,16 @@ function AdminDialog({
         >
           <Field label="Full Name" value={name} onChange={setName} required />
           <Field label="Email Address" value={email} onChange={setEmail} type="email" required />
-          <Field 
-            label={initial ? "Password (leave blank to keep current)" : "Password"} 
-            value={password} 
-            onChange={setPassword} 
-            type="password" 
-            required={!initial} 
+          <Field
+            label={initial ? "Password (leave blank to keep current)" : "Password"}
+            value={password}
+            onChange={setPassword}
+            type="password"
+            required={!initial}
           />
-          
+
           <div className="rounded-md bg-accent/20 p-3 text-xs text-muted-foreground">
-            {initial 
+            {initial
               ? "Leave the password field blank if you do not wish to change it."
               : "Make sure to save these credentials securely. The new administrator will have full access to billing, branches, and system data."}
           </div>

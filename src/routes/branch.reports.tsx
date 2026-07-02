@@ -53,7 +53,7 @@ function BranchReports() {
         description="Your branch's billing history."
         actions={
           <ExportExcelButton
-            filename={`branch-bills-report-${new Date().toISOString().split('T')[0]}`}
+            filename={`branch-bills-report-${new Date().toISOString().split("T")[0]}`}
             headers={[
               "Invoice",
               "Customer",
@@ -143,11 +143,13 @@ function BranchReports() {
               <button
                 onClick={() => {
                   const oldTitle = document.title;
-                  const safeCustomer = (viewing.customer || "Walk-in").replace(/[^a-z0-9]/gi, '_');
-                  const dateStr = new Date(viewing.createdAt).toISOString().split('T')[0];
+                  const safeCustomer = (viewing.customer || "Walk-in").replace(/[^a-z0-9]/gi, "_");
+                  const dateStr = new Date(viewing.createdAt).toISOString().split("T")[0];
                   document.title = `${viewing.number}_${safeCustomer}_${dateStr}`;
                   window.print();
-                  setTimeout(() => { document.title = oldTitle; }, 100);
+                  setTimeout(() => {
+                    document.title = oldTitle;
+                  }, 100);
                 }}
                 className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90"
               >

@@ -4,6 +4,7 @@ import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { useStore, fmtMoney, type Product } from "@/lib/store";
 import { Package, Pencil, Plus, ScanLine, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { ImageLightbox } from "./ImageLightbox";
 import { supabase } from "@/lib/supabase";
 
@@ -12,8 +13,11 @@ const taxes = ["No Tax", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 
 export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
   const { session, branches, products, addProduct, updateProduct, deleteProduct } = useStore();
+  const confirm = useConfirm();
   const isAdmin = mode === "admin";
-  const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const defaultBranchId = isAdmin
+    ? session?.defaultBranchId || branches[0]?.id || ""
+    : session?.branchId || "";
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [query, setQuery] = useState("");
@@ -38,7 +42,9 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
 
   const stats = useMemo(() => {
     const stockProducts = scoped.filter((p) => (p.type ?? "Product") === "Product");
-    const lowStock = stockProducts.filter((p) => p.stock > 0 && p.stock <= (p.lowStockAlert ?? 10)).length;
+    const lowStock = stockProducts.filter(
+      (p) => p.stock > 0 && p.stock <= (p.lowStockAlert ?? 10),
+    ).length;
     const outOfStock = stockProducts.filter((p) => p.stock <= 0).length;
     const value = stockProducts.reduce((sum, p) => sum + p.stock * (p.costPrice ?? 0), 0);
     return { total: scoped.length, lowStock, outOfStock, value };
@@ -46,7 +52,16 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
 
   const exportRows = scoped.map((p) => {
     const branch = branches.find((b) => b.id === p.branchId);
-    return [p.name, p.sku, p.type ?? "Product", branch?.name ?? "", String(p.stock), String(p.sellingPrice ?? p.price), p.category ?? "", p.brand ?? ""];
+    return [
+      p.name,
+      p.sku,
+      p.type ?? "Product",
+      branch?.name ?? "",
+      String(p.stock),
+      String(p.sellingPrice ?? p.price),
+      p.category ?? "",
+      p.brand ?? "",
+    ];
   });
 
   const closeDialog = () => {
@@ -64,7 +79,16 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
           <>
             <ExportExcelButton
               filename={isAdmin ? "products-catalog" : "branch-products"}
-              headers={["Name", "SKU", "Type", "Branch", "Stock", "Selling Price", "Category", "Brand"]}
+              headers={[
+                "Name",
+                "SKU",
+                "Type",
+                "Branch",
+                "Stock",
+                "Selling Price",
+                "Category",
+                "Brand",
+              ]}
               rows={exportRows}
             />
             <button
@@ -96,7 +120,11 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
           className="w-full max-w-xs rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
         />
         {isAdmin && (
-          <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink">
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+          >
             <option value="all">All branches</option>
             {branches.map((branch) => (
               <option key={branch.id} value={branch.id}>
@@ -124,9 +152,14 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
           <tbody>
             {scoped.map((product) => {
               const branch = branches.find((b) => b.id === product.branchId);
-              const low = (product.type ?? "Product") === "Product" && product.stock <= (product.lowStockAlert ?? 10);
+              const low =
+                (product.type ?? "Product") === "Product" &&
+                product.stock <= (product.lowStockAlert ?? 10);
               return (
-                <tr key={product.id} className="group border-b border-border/60 transition hover:bg-muted/50">
+                <tr
+                  key={product.id}
+                  className="group border-b border-border/60 transition hover:bg-muted/50"
+                >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       {product.image && product.image.startsWith("http") ? (
@@ -151,26 +184,47 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
                       )}
                       <div>
                         <div className="font-medium">{product.name}</div>
-                        <div className="text-xs text-muted-foreground">{product.category || "Uncategorized"} {product.brand ? `· ${product.brand}` : ""}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {product.category || "Uncategorized"}{" "}
+                          {product.brand ? `· ${product.brand}` : ""}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground num">{product.sku}</td>
-                  {isAdmin && <td className="px-5 py-3 text-muted-foreground">{branch?.name ?? "-"}</td>}
+                  {isAdmin && (
+                    <td className="px-5 py-3 text-muted-foreground">{branch?.name ?? "-"}</td>
+                  )}
                   <td className="px-5 py-3">{product.type ?? "Product"}</td>
                   <td className={`px-5 py-3 text-right num ${low ? "text-destructive" : ""}`}>
                     {(product.type ?? "Product") === "Service" ? "-" : product.stock}
                   </td>
-                  <td className="px-5 py-3 text-right num">{fmtMoney(product.sellingPrice ?? product.price)}</td>
+                  <td className="px-5 py-3 text-right num">
+                    {fmtMoney(product.sellingPrice ?? product.price)}
+                  </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex justify-end gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
-                      <button type="button" onClick={() => { setEditing(product); setOpen(true); }} className="rounded-md p-1.5 hover:bg-accent" aria-label={`Edit ${product.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditing(product);
+                          setOpen(true);
+                        }}
+                        className="rounded-md p-1.5 hover:bg-accent"
+                        aria-label={`Edit ${product.name}`}
+                      >
                         <Pencil className="size-3.5" />
                       </button>
                       <button
                         type="button"
                         onClick={async () => {
-                          if (!confirm(`Delete ${product.name}?`)) return;
+                          if (
+                            !(await confirm({
+                              title: "Delete item?",
+                              description: `Are you sure you want to delete ${product.name}?`,
+                            }))
+                          )
+                            return;
                           try {
                             await deleteProduct(product.id);
                             toast.success("Product deleted");
@@ -190,7 +244,10 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
             })}
             {scoped.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 7 : 6} className="px-5 py-12 text-center text-muted-foreground">
+                <td
+                  colSpan={isAdmin ? 7 : 6}
+                  className="px-5 py-12 text-center text-muted-foreground"
+                >
                   No products or services found.
                 </td>
               </tr>
@@ -266,14 +323,20 @@ function ProductDialog({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [costPrice, setCostPrice] = useState(String(initial?.costPrice ?? 0));
-  const [sellingPrice, setSellingPrice] = useState(String(initial?.sellingPrice ?? initial?.price ?? 0));
+  const [sellingPrice, setSellingPrice] = useState(
+    String(initial?.sellingPrice ?? initial?.price ?? 0),
+  );
   const [tax, setTax] = useState(initial?.tax ?? "No Tax");
   const [unit, setUnit] = useState(initial?.unit ?? "Pieces");
   const [stock, setStock] = useState(String(initial?.stock ?? 0));
   const [lowStockAlert, setLowStockAlert] = useState(String(initial?.lowStockAlert ?? 10));
-  const [trackBySerialNumbers, setTrackBySerialNumbers] = useState(initial?.trackBySerialNumbers ?? false);
+  const [trackBySerialNumbers, setTrackBySerialNumbers] = useState(
+    initial?.trackBySerialNumbers ?? false,
+  );
 
-  const categories = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean))) as string[];
+  const categories = Array.from(
+    new Set(allProducts.map((p) => p.category).filter(Boolean)),
+  ) as string[];
   const brands = Array.from(new Set(allProducts.map((p) => p.brand).filter(Boolean))) as string[];
 
   const submit = async (e: FormEvent) => {
@@ -284,20 +347,18 @@ function ProductDialog({
       setUploading(true);
       const toastId = toast.loading("Uploading image...");
       try {
-        const fileExt = newFile.name.split('.').pop();
+        const fileExt = newFile.name.split(".").pop();
         const uniqueId = Math.random().toString(36).substring(2, 9);
         const fileName = `${uniqueId}-${Date.now()}.${fileExt}`;
         const filePath = `${fileName}`;
 
         const { error } = await supabase.storage
           .from("repairs")
-          .upload(filePath, newFile, { cacheControl: '3600', upsert: false });
+          .upload(filePath, newFile, { cacheControl: "3600", upsert: false });
 
         if (error) throw error;
 
-        const { data: urlData } = supabase.storage
-          .from("repairs")
-          .getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage.from("repairs").getPublicUrl(filePath);
 
         imageUrl = urlData.publicUrl;
         toast.dismiss(toastId);
@@ -335,21 +396,43 @@ function ProductDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="mx-auto my-6 w-full max-w-4xl rounded-xl border border-border bg-card p-6 shadow-paper" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="mx-auto my-6 w-full max-w-4xl rounded-xl border border-border bg-card p-6 shadow-paper"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-5 flex items-start justify-between">
           <div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{initial ? "Edit" : "New"}</div>
-            <h2 className="font-display text-2xl">{initial ? "Edit product/service" : "Add product/service"}</h2>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              {initial ? "Edit" : "New"}
+            </div>
+            <h2 className="font-display text-2xl">
+              {initial ? "Edit product/service" : "Add product/service"}
+            </h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1.5 hover:bg-accent" aria-label="Close">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 hover:bg-accent"
+            aria-label="Close"
+          >
             <X className="size-4" />
           </button>
         </div>
 
         <form className="grid gap-5" onSubmit={submit}>
           {isAdmin && (
-            <SelectField label="Branch *" value={branchId} onChange={setBranchId} options={branches.map((b) => b.name)} values={branches.map((b) => b.id)} required />
+            <SelectField
+              label="Branch *"
+              value={branchId}
+              onChange={setBranchId}
+              options={branches.map((b) => b.name)}
+              values={branches.map((b) => b.id)}
+              required
+            />
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -361,8 +444,12 @@ function ProductDialog({
                 className={`rounded-xl border p-4 text-left ${type === option ? "border-ink bg-ink text-paper" : "border-border bg-background hover:bg-accent"}`}
               >
                 <div className="font-medium">{option}</div>
-                <div className={`mt-1 text-xs ${type === option ? "text-paper/80" : "text-muted-foreground"}`}>
-                  {option === "Product" ? "Physical item with stock tracking" : "No stock tracking required"}
+                <div
+                  className={`mt-1 text-xs ${type === option ? "text-paper/80" : "text-muted-foreground"}`}
+                >
+                  {option === "Product"
+                    ? "Physical item with stock tracking"
+                    : "No stock tracking required"}
                 </div>
               </button>
             ))}
@@ -370,7 +457,9 @@ function ProductDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Image</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Image
+              </span>
               <div className="flex items-center gap-3">
                 <input
                   type="file"
@@ -407,26 +496,67 @@ function ProductDialog({
               </div>
             </div>
             <Field label="Product name *" value={name} onChange={setName} required />
-            <Field label="SKU" value={sku} onChange={setSku} placeholder="Auto-generated if empty" />
+            <Field
+              label="SKU"
+              value={sku}
+              onChange={setSku}
+              placeholder="Auto-generated if empty"
+            />
             <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Barcode</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                Barcode
+              </span>
               <div className="relative">
                 <ScanLine className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input value={barcode} onChange={(e) => setBarcode(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 pr-9 text-sm outline-none focus:border-ink" />
+                <input
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 pr-9 text-sm outline-none focus:border-ink"
+                />
               </div>
             </label>
-            <ComboField label="Category" value={category} onChange={setCategory} options={categories} placeholder="+ create category" />
-            <ComboField label="Brand" value={brand} onChange={setBrand} options={brands} placeholder="+ create brand" />
+            <ComboField
+              label="Category"
+              value={category}
+              onChange={setCategory}
+              options={categories}
+              placeholder="+ create category"
+            />
+            <ComboField
+              label="Brand"
+              value={brand}
+              onChange={setBrand}
+              options={brands}
+              placeholder="+ create brand"
+            />
           </div>
           <TextArea label="Description" value={description} onChange={setDescription} />
           <label className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm">
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+            />
             Active (Available for sale)
           </label>
 
           <div className="grid gap-4 sm:grid-cols-4">
-            <Field label="Cost price *" type="number" step="0.01" value={costPrice} onChange={setCostPrice} required />
-            <Field label="Selling price *" type="number" step="0.01" value={sellingPrice} onChange={setSellingPrice} required />
+            <Field
+              label="Cost price *"
+              type="number"
+              step="0.01"
+              value={costPrice}
+              onChange={setCostPrice}
+              required
+            />
+            <Field
+              label="Selling price *"
+              type="number"
+              step="0.01"
+              value={sellingPrice}
+              onChange={setSellingPrice}
+              required
+            />
             <SelectField label="Tax" value={tax} onChange={setTax} options={taxes} />
             <SelectField label="Unit *" value={unit} onChange={setUnit} options={units} required />
           </div>
@@ -434,18 +564,38 @@ function ProductDialog({
           {type === "Product" && (
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Initial stock" type="number" value={stock} onChange={setStock} />
-              <Field label="Low stock alert" type="number" value={lowStockAlert} onChange={setLowStockAlert} helper="Alert when stock falls below this" />
+              <Field
+                label="Low stock alert"
+                type="number"
+                value={lowStockAlert}
+                onChange={setLowStockAlert}
+                helper="Alert when stock falls below this"
+              />
               <label className="flex items-center gap-2 self-end rounded-md border border-border bg-background px-3 py-2 text-sm">
-                <input type="checkbox" checked={trackBySerialNumbers} onChange={(e) => setTrackBySerialNumbers(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={trackBySerialNumbers}
+                  onChange={(e) => setTrackBySerialNumbers(e.target.checked)}
+                />
                 Track by serial numbers
               </label>
             </div>
           )}
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Cancel</button>
-            <button type="submit" disabled={uploading} className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-50">
-              {uploading ? "Uploading..." : (initial ? "Save changes" : "Create product")}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={uploading}
+              className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-50"
+            >
+              {uploading ? "Uploading..." : initial ? "Save changes" : "Create product"}
             </button>
           </div>
         </form>
@@ -463,21 +613,66 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Field({ label, value, onChange, type = "text", required, step, helper, placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; step?: string; helper?: string; placeholder?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  required,
+  step,
+  helper,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+  step?: string;
+  helper?: string;
+  placeholder?: string;
+}) {
   return (
     <label className="grid gap-1.5">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <input type={type} step={step} required={required} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink" />
+      <input
+        type={type}
+        step={step}
+        required={required}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+      />
       {helper && <span className="text-xs text-muted-foreground">{helper}</span>}
     </label>
   );
 }
 
-function SelectField({ label, value, onChange, options, values, required }: { label: string; value: string; onChange: (value: string) => void; options: string[]; values?: string[]; required?: boolean }) {
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  values,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  values?: string[];
+  required?: boolean;
+}) {
   return (
     <label className="grid gap-1.5">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <select required={required} value={value} onChange={(e) => onChange(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink">
+      <select
+        required={required}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+      >
         <option value="">Select</option>
         {options.map((option, index) => (
           <option key={values?.[index] ?? option} value={values?.[index] ?? option}>
@@ -489,12 +684,30 @@ function SelectField({ label, value, onChange, options, values, required }: { la
   );
 }
 
-function ComboField({ label, value, onChange, options, placeholder }: { label: string; value: string; onChange: (value: string) => void; options: string[]; placeholder: string }) {
+function ComboField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder: string;
+}) {
   const id = `${label.toLowerCase()}-options`;
   return (
     <label className="grid gap-1.5">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <input list={id} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink" />
+      <input
+        list={id}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+      />
       <datalist id={id}>
         {options.map((option) => (
           <option key={option} value={option} />
@@ -504,11 +717,23 @@ function ComboField({ label, value, onChange, options, placeholder }: { label: s
   );
 }
 
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function TextArea({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <label className="grid gap-1.5">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink" />
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+      />
     </label>
   );
 }

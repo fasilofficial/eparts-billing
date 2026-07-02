@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, fmtDate, fmtMoney, type Repair, type RepairItem } from "@/lib/store";
 import { Pencil, Plus, Trash2, Wrench, X, SlidersHorizontal, Receipt } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { supabase } from "@/lib/supabase";
 import { ImageLightbox } from "./ImageLightbox";
 import { useNavigate } from "@tanstack/react-router";
@@ -35,9 +36,13 @@ const emptyItem = (): DraftItem => ({
 });
 
 export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, customers, repairs, addRepair, updateRepair, deleteRepair } = useStore();
+  const { session, branches, customers, repairs, addRepair, updateRepair, deleteRepair } =
+    useStore();
+  const confirm = useConfirm();
   const isAdmin = mode === "admin";
-  const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const defaultBranchId = isAdmin
+    ? session?.defaultBranchId || branches[0]?.id || ""
+    : session?.branchId || "";
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Repair | null>(null);
@@ -93,10 +98,26 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           if (!hasExpectedCompletionMatch) return false;
         }
 
-        const itemText = repair.items.map((item) => `${item.brand} ${item.item} ${item.serialNumber ?? ""}`).join(" ");
-        return `${repair.number} ${repair.customerName} ${itemText}`.toLowerCase().includes(query.toLowerCase());
+        const itemText = repair.items
+          .map((item) => `${item.brand} ${item.item} ${item.serialNumber ?? ""}`)
+          .join(" ");
+        return `${repair.number} ${repair.customerName} ${itemText}`
+          .toLowerCase()
+          .includes(query.toLowerCase());
       }),
-    [branchFilter, isAdmin, query, repairs, session?.branchId, statusFilter, customerFilter, createdFrom, createdTo, expectedFrom, expectedTo],
+    [
+      branchFilter,
+      isAdmin,
+      query,
+      repairs,
+      session?.branchId,
+      statusFilter,
+      customerFilter,
+      createdFrom,
+      createdTo,
+      expectedFrom,
+      expectedTo,
+    ],
   );
 
   return (
@@ -150,11 +171,16 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
         >
           <SlidersHorizontal className="size-4 text-muted-foreground" />
           Filter
-          {(statusFilter !== "all" || customerFilter !== "all" || createdFrom || createdTo || expectedFrom || expectedTo) && (
-            <span className="ml-1 flex size-2 rounded-full bg-ink animate-pulse" />
-          )}
+          {(statusFilter !== "all" ||
+            customerFilter !== "all" ||
+            createdFrom ||
+            createdTo ||
+            expectedFrom ||
+            expectedTo) && <span className="ml-1 flex size-2 rounded-full bg-ink animate-pulse" />}
         </button>
-        <div className="text-xs text-muted-foreground sm:ml-auto">{scopedRepairs.length} repairs</div>
+        <div className="text-xs text-muted-foreground sm:ml-auto">
+          {scopedRepairs.length} repairs
+        </div>
       </div>
 
       <div className="grid gap-3">
@@ -162,7 +188,10 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           const branch = branches.find((b) => b.id === repair.branchId);
           const estimate = repair.items.reduce((sum, item) => sum + (item.estimatedCost || 0), 0);
           return (
-            <article key={repair.id} className="rounded-xl border border-border bg-card p-5 shadow-soft">
+            <article
+              key={repair.id}
+              className="rounded-xl border border-border bg-card p-5 shadow-soft"
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -172,13 +201,16 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    {repair.customerName} · {branch?.name ?? "Unknown branch"} · {fmtDate(repair.createdAt)}
+                    {repair.customerName} · {branch?.name ?? "Unknown branch"} ·{" "}
+                    {fmtDate(repair.createdAt)}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-start justify-between gap-3 sm:block sm:text-right">
                   <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Estimate</div>
-                  <div className="num text-lg">{fmtMoney(estimate)}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Estimate
+                    </div>
+                    <div className="num text-lg">{fmtMoney(estimate)}</div>
                   </div>
                   <div className="flex gap-1 sm:mt-3 sm:justify-end">
                     <button
@@ -210,7 +242,13 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                     <button
                       type="button"
                       onClick={async () => {
-                        if (!confirm(`Delete ${repair.number}?`)) return;
+                        if (
+                          !(await confirm({
+                            title: "Delete repair record?",
+                            description: `Are you sure you want to delete repair record ${repair.number}?`,
+                          }))
+                        )
+                          return;
                         try {
                           await deleteRepair(repair.id);
                           toast.success("Repair deleted");
@@ -229,7 +267,10 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
               </div>
               <div className="mt-4 grid gap-2">
                 {repair.items.map((item, index) => (
-                  <div key={item.id ?? index} className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm">
+                  <div
+                    key={item.id ?? index}
+                    className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-medium">
                         {item.brand} {item.item} x{item.quantity}
@@ -242,7 +283,9 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                     </div>
                     {item.photos && item.photos.length > 0 && (
                       <div className="mt-2.5 space-y-1">
-                        <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Attached Photos:</div>
+                        <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                          Attached Photos:
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           {item.photos.map((photo, pIdx) => {
                             const isUrl = photo.startsWith("http");
@@ -251,7 +294,9 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                                 key={pIdx}
                                 type="button"
                                 onClick={() => {
-                                  const urls = repair.items.flatMap((it) => it.photos).filter((p) => p.startsWith("http"));
+                                  const urls = repair.items
+                                    .flatMap((it) => it.photos)
+                                    .filter((p) => p.startsWith("http"));
                                   const idx = urls.indexOf(photo);
                                   setLightbox({
                                     isOpen: true,
@@ -265,7 +310,10 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                                 <img src={photo} alt="" className="size-full object-cover" />
                               </button>
                             ) : (
-                              <span key={pIdx} className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-mono border border-border text-muted-foreground">
+                              <span
+                                key={pIdx}
+                                className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[10px] font-mono border border-border text-muted-foreground"
+                              >
                                 📄 {photo} (Legacy)
                               </span>
                             );
@@ -376,7 +424,9 @@ function RepairDialog({
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
   const [status, setStatus] = useState(initial?.status ?? "Open");
   const [items, setItems] = useState<DraftItem[]>(
-    initial?.items.length ? initial.items.map((item) => ({ ...item, draftIssue: "" })) : [emptyItem()],
+    initial?.items.length
+      ? initial.items.map((item) => ({ ...item, draftIssue: "" }))
+      : [emptyItem()],
   );
   const [uploading, setUploading] = useState(false);
 
@@ -387,7 +437,9 @@ function RepairDialog({
   const branchCustomers = customers.filter((customer) => customer.branchId === branchId);
   const selectedCustomer = customers.find((customer) => customer.id === customerId);
   const customerOptions = branchCustomers
-    .filter((customer) => `${customer.name} ${customer.phone}`.toLowerCase().includes(customerQuery.toLowerCase()))
+    .filter((customer) =>
+      `${customer.name} ${customer.phone}`.toLowerCase().includes(customerQuery.toLowerCase()),
+    )
     .slice(0, 6);
 
   const updateItem = (index: number, patch: Partial<DraftItem>) => {
@@ -406,7 +458,12 @@ function RepairDialog({
       return;
     }
 
-    if (items.some((item) => !item.brand.trim() || !item.item.trim() || item.issues.filter(Boolean).length === 0)) {
+    if (
+      items.some(
+        (item) =>
+          !item.brand.trim() || !item.item.trim() || item.issues.filter(Boolean).length === 0,
+      )
+    ) {
       toast.error("Every item needs brand, item name, and at least one issue");
       return;
     }
@@ -415,52 +472,58 @@ function RepairDialog({
     const toastId = toast.loading("Uploading images...");
 
     try {
-      const cleanItems = await Promise.all(items.map(async ({ draftIssue, newFiles, ...item }) => {
-        let photos = [...(item.photos || [])];
+      const cleanItems = await Promise.all(
+        items.map(async ({ draftIssue, newFiles, ...item }) => {
+          let photos = [...(item.photos || [])];
 
-        if (newFiles && newFiles.length > 0) {
-          const uploadPromises = newFiles.map(async (file) => {
-            const fileExt = file.name.split('.').pop();
-            const uniqueId = Math.random().toString(36).substring(2, 9);
-            const fileName = `${uniqueId}-${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
+          if (newFiles && newFiles.length > 0) {
+            const uploadPromises = newFiles.map(async (file) => {
+              const fileExt = file.name.split(".").pop();
+              const uniqueId = Math.random().toString(36).substring(2, 9);
+              const fileName = `${uniqueId}-${Date.now()}.${fileExt}`;
+              const filePath = `${fileName}`;
 
-            const { error } = await supabase.storage
-              .from("repairs")
-              .upload(filePath, file, { cacheControl: '3600', upsert: false });
+              const { error } = await supabase.storage
+                .from("repairs")
+                .upload(filePath, file, { cacheControl: "3600", upsert: false });
 
-            if (error) throw error;
+              if (error) throw error;
 
-            const { data: urlData } = supabase.storage
-              .from("repairs")
-              .getPublicUrl(filePath);
+              const { data: urlData } = supabase.storage.from("repairs").getPublicUrl(filePath);
 
-            return { originalName: file.name, publicUrl: urlData.publicUrl };
-          });
+              return { originalName: file.name, publicUrl: urlData.publicUrl };
+            });
 
-          const uploadedFiles = await Promise.all(uploadPromises);
+            const uploadedFiles = await Promise.all(uploadPromises);
 
-          // Replace local filenames with their public URLs in the photos array
-          photos = photos.map((photo) => {
-            const uploaded = uploadedFiles.find((u) => u.originalName === photo);
-            return uploaded ? uploaded.publicUrl : photo;
-          });
-        }
+            // Replace local filenames with their public URLs in the photos array
+            photos = photos.map((photo) => {
+              const uploaded = uploadedFiles.find((u) => u.originalName === photo);
+              return uploaded ? uploaded.publicUrl : photo;
+            });
+          }
 
-        return {
-          ...item,
-          brand: item.brand.trim(),
-          item: item.item.trim(),
-          quantity: Number(item.quantity) || 1,
-          estimatedCost: item.estimatedCost == null ? undefined : Number(item.estimatedCost),
-          serviceCost: item.serviceCost == null ? undefined : Number(item.serviceCost),
-          issues: item.issues.filter(Boolean),
-          photos,
-        };
-      }));
+          return {
+            ...item,
+            brand: item.brand.trim(),
+            item: item.item.trim(),
+            quantity: Number(item.quantity) || 1,
+            estimatedCost: item.estimatedCost == null ? undefined : Number(item.estimatedCost),
+            serviceCost: item.serviceCost == null ? undefined : Number(item.serviceCost),
+            issues: item.issues.filter(Boolean),
+            photos,
+          };
+        }),
+      );
 
       toast.dismiss(toastId);
-      onSave({ branchId, customerId: selectedCustomer?.id, customerName, status, items: cleanItems });
+      onSave({
+        branchId,
+        customerId: selectedCustomer?.id,
+        customerName,
+        status,
+        items: cleanItems,
+      });
     } catch (err: any) {
       toast.dismiss(toastId);
       toast.error(`Image upload failed: ${err.message}`);
@@ -470,16 +533,29 @@ function RepairDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="mx-auto my-6 w-full max-w-5xl rounded-xl border border-border bg-card p-6 shadow-paper" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="mx-auto my-6 w-full max-w-5xl rounded-xl border border-border bg-card p-6 shadow-paper"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-5 flex items-start justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
               {initial ? "Edit" : "New"}
             </div>
-            <h2 className="font-display text-2xl">{initial ? `Edit ${initial.number}` : "Create repair"}</h2>
+            <h2 className="font-display text-2xl">
+              {initial ? `Edit ${initial.number}` : "Create repair"}
+            </h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1.5 hover:bg-accent" aria-label="Close">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 hover:bg-accent"
+            aria-label="Close"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -488,8 +564,15 @@ function RepairDialog({
           <div className="grid gap-4 sm:grid-cols-2 items-start">
             {isAdmin && (
               <label className="grid gap-1.5">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground">Branch *</span>
-                <select required value={branchId} onChange={(e) => setBranchId(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Branch *
+                </span>
+                <select
+                  required
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+                >
                   <option value="">Select branch</option>
                   {branches.map((branch) => (
                     <option key={branch.id} value={branch.id}>
@@ -501,7 +584,9 @@ function RepairDialog({
             )}
 
             <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Customer *</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                Customer *
+              </span>
               <input
                 required
                 list="repair-customers"
@@ -540,7 +625,11 @@ function RepairDialog({
             </label>
             <label className="grid gap-1.5">
               <span className="text-xs uppercase tracking-wider text-muted-foreground">Status</span>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+              >
                 <option>Open</option>
                 <option>In Progress</option>
                 <option>Waiting for Parts</option>
@@ -560,23 +649,68 @@ function RepairDialog({
                     <h3 className="font-medium">Repair item {index + 1}</h3>
                   </div>
                   {items.length > 1 && (
-                    <button type="button" onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))} className="rounded-md p-1.5 text-destructive hover:bg-accent" aria-label="Remove item">
+                    <button
+                      type="button"
+                      onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                      aria-label="Remove item"
+                    >
                       <Trash2 className="size-4" />
                     </button>
                   )}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <Field label="Brand *" value={item.brand} onChange={(value) => updateItem(index, { brand: value })} required />
-                  <Field label="Item *" value={item.item} onChange={(value) => updateItem(index, { item: value })} required />
-                  <Field label="Quantity" type="number" value={String(item.quantity)} onChange={(value) => updateItem(index, { quantity: Number(value) || 1 })} />
-                  <Field label="Serial number / barcode" value={item.serialNumber ?? ""} onChange={(value) => updateItem(index, { serialNumber: value })} />
-                  <Field label="Estimated cost" type="number" step="0.01" value={String(item.estimatedCost ?? "")} onChange={(value) => updateItem(index, { estimatedCost: value === "" ? undefined : Number(value) })} />
-                  <Field label="Service cost" type="number" step="0.01" value={String(item.serviceCost ?? "")} onChange={(value) => updateItem(index, { serviceCost: value === "" ? undefined : Number(value) })} />
+                  <Field
+                    label="Brand *"
+                    value={item.brand}
+                    onChange={(value) => updateItem(index, { brand: value })}
+                    required
+                  />
+                  <Field
+                    label="Item *"
+                    value={item.item}
+                    onChange={(value) => updateItem(index, { item: value })}
+                    required
+                  />
+                  <Field
+                    label="Quantity"
+                    type="number"
+                    value={String(item.quantity)}
+                    onChange={(value) => updateItem(index, { quantity: Number(value) || 1 })}
+                  />
+                  <Field
+                    label="Serial number / barcode"
+                    value={item.serialNumber ?? ""}
+                    onChange={(value) => updateItem(index, { serialNumber: value })}
+                  />
+                  <Field
+                    label="Estimated cost"
+                    type="number"
+                    step="0.01"
+                    value={String(item.estimatedCost ?? "")}
+                    onChange={(value) =>
+                      updateItem(index, { estimatedCost: value === "" ? undefined : Number(value) })
+                    }
+                  />
+                  <Field
+                    label="Service cost"
+                    type="number"
+                    step="0.01"
+                    value={String(item.serviceCost ?? "")}
+                    onChange={(value) =>
+                      updateItem(index, { serviceCost: value === "" ? undefined : Number(value) })
+                    }
+                  />
                   <label className="grid gap-1.5">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">Assigned to</span>
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Assigned to
+                    </span>
                     <select
-                      value={item.assignedToId || (item.assignedTo !== "Unassigned" ? item.assignedTo : "Unassigned")}
+                      value={
+                        item.assignedToId ||
+                        (item.assignedTo !== "Unassigned" ? item.assignedTo : "Unassigned")
+                      }
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === "Unassigned") {
@@ -584,7 +718,10 @@ function RepairDialog({
                         } else {
                           const selected = branchStaff.find((s) => s.id === val);
                           if (selected) {
-                            updateItem(index, { assignedTo: selected.name, assignedToId: selected.id });
+                            updateItem(index, {
+                              assignedTo: selected.name,
+                              assignedToId: selected.id,
+                            });
                           }
                         }
                       }}
@@ -596,16 +733,27 @@ function RepairDialog({
                           {s.name} {s.role ? `(${s.role})` : ""}
                         </option>
                       ))}
-                      {item.assignedTo && item.assignedTo !== "Unassigned" && !branchStaff.some((s) => s.id === item.assignedToId) && (
-                        <option value={item.assignedTo} disabled>
-                          {item.assignedTo} (Legacy)
-                        </option>
-                      )}
+                      {item.assignedTo &&
+                        item.assignedTo !== "Unassigned" &&
+                        !branchStaff.some((s) => s.id === item.assignedToId) && (
+                          <option value={item.assignedTo} disabled>
+                            {item.assignedTo} (Legacy)
+                          </option>
+                        )}
                     </select>
                   </label>
-                  <Field label="Expected completion" type="date" value={item.expectedCompletionDate ?? ""} onChange={(value) => updateItem(index, { expectedCompletionDate: value })} />
+                  <Field
+                    label="Expected completion"
+                    type="date"
+                    value={item.expectedCompletionDate ?? ""}
+                    onChange={(value) => updateItem(index, { expectedCompletionDate: value })}
+                  />
                   <label className="flex items-center gap-2 self-end rounded-md border border-border bg-card px-3 py-2 text-sm">
-                    <input type="checkbox" checked={item.underWarranty} onChange={(e) => updateItem(index, { underWarranty: e.target.checked })} />
+                    <input
+                      type="checkbox"
+                      checked={item.underWarranty}
+                      onChange={(e) => updateItem(index, { underWarranty: e.target.checked })}
+                    />
                     Under warranty
                   </label>
                 </div>
@@ -614,7 +762,9 @@ function RepairDialog({
                   <IssuePicker item={item} onChange={(patch) => updateItem(index, patch)} />
                   <div className="grid gap-2">
                     <label className="grid gap-1.5">
-                      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Add Photos (up to 10)</span>
+                      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                        Add Photos (up to 10)
+                      </span>
                       <input
                         type="file"
                         accept="image/*"
@@ -626,84 +776,117 @@ function RepairDialog({
                           const newNames = files.map((file) => file.name);
                           updateItem(index, {
                             photos: [...existingPhotos, ...newNames],
-                            newFiles: [...(item.newFiles || []), ...files]
+                            newFiles: [...(item.newFiles || []), ...files],
                           });
                         }}
                         className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
                       />
                     </label>
 
-                    {((item.photos && item.photos.length > 0) || (item.newFiles && item.newFiles.length > 0)) && (
+                    {((item.photos && item.photos.length > 0) ||
+                      (item.newFiles && item.newFiles.length > 0)) && (
                       <div className="flex flex-wrap gap-2 pt-1">
-                        {item.photos && item.photos
-                          .filter((photo) => !item.newFiles?.some((f) => f.name === photo))
-                          .map((photo, pIdx) => {
-                            const isUrl = photo.startsWith("http");
-                          return (
-                            <div key={`existing-${pIdx}`} className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted">
-                              {isUrl ? (
-                                <img src={photo} alt="" className="size-full object-cover" />
-                              ) : (
-                                <div className="size-full flex flex-col items-center justify-center p-1 text-[8px] text-center text-muted-foreground break-all">
-                                  <span>📄</span>
-                                  <span className="truncate w-full">{photo}</span>
+                        {item.photos &&
+                          item.photos
+                            .filter((photo) => !item.newFiles?.some((f) => f.name === photo))
+                            .map((photo, pIdx) => {
+                              const isUrl = photo.startsWith("http");
+                              return (
+                                <div
+                                  key={`existing-${pIdx}`}
+                                  className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted"
+                                >
+                                  {isUrl ? (
+                                    <img src={photo} alt="" className="size-full object-cover" />
+                                  ) : (
+                                    <div className="size-full flex flex-col items-center justify-center p-1 text-[8px] text-center text-muted-foreground break-all">
+                                      <span>📄</span>
+                                      <span className="truncate w-full">{photo}</span>
+                                    </div>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedPhotos = item.photos.filter(
+                                        (_, i) => i !== pIdx,
+                                      );
+                                      updateItem(index, { photos: updatedPhotos });
+                                    }}
+                                    className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
+                                    title="Remove photo"
+                                  >
+                                    <X className="size-3" />
+                                  </button>
                                 </div>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updatedPhotos = item.photos.filter((_, i) => i !== pIdx);
-                                  updateItem(index, { photos: updatedPhotos });
-                                }}
-                                className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
-                                title="Remove photo"
-                              >
-                                <X className="size-3" />
-                              </button>
-                            </div>
-                          );
-                        })}
+                              );
+                            })}
 
-                        {item.newFiles && item.newFiles.map((file, fIdx) => {
-                          const localUrl = URL.createObjectURL(file);
-                          return (
-                            <div key={`new-${fIdx}`} className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted">
-                              <img src={localUrl} alt="" className="size-full object-cover" />
-                              <span className="absolute bottom-0 inset-x-0 bg-ink/60 text-[8px] text-paper text-center truncate py-0.5">New</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updatedNewFiles = item.newFiles?.filter((_, i) => i !== fIdx) || [];
-                                  const updatedPhotos = item.photos.filter((p) => p !== file.name);
-                                  updateItem(index, { newFiles: updatedNewFiles, photos: updatedPhotos });
-                                }}
-                                className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
-                                title="Remove photo"
+                        {item.newFiles &&
+                          item.newFiles.map((file, fIdx) => {
+                            const localUrl = URL.createObjectURL(file);
+                            return (
+                              <div
+                                key={`new-${fIdx}`}
+                                className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted"
                               >
-                                <X className="size-3" />
-                              </button>
-                            </div>
-                          );
-                        })}
+                                <img src={localUrl} alt="" className="size-full object-cover" />
+                                <span className="absolute bottom-0 inset-x-0 bg-ink/60 text-[8px] text-paper text-center truncate py-0.5">
+                                  New
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedNewFiles =
+                                      item.newFiles?.filter((_, i) => i !== fIdx) || [];
+                                    const updatedPhotos = item.photos.filter(
+                                      (p) => p !== file.name,
+                                    );
+                                    updateItem(index, {
+                                      newFiles: updatedNewFiles,
+                                      photos: updatedPhotos,
+                                    });
+                                  }}
+                                  className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
+                                  title="Remove photo"
+                                >
+                                  <X className="size-3" />
+                                </button>
+                              </div>
+                            );
+                          })}
                       </div>
                     )}
                   </div>
                 </div>
 
                 <label className="mt-4 grid gap-1.5">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Issue description</span>
-                  <textarea value={item.issueDescription ?? ""} onChange={(e) => updateItem(index, { issueDescription: e.target.value })} className="min-h-24 rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink" />
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Issue description
+                  </span>
+                  <textarea
+                    value={item.issueDescription ?? ""}
+                    onChange={(e) => updateItem(index, { issueDescription: e.target.value })}
+                    className="min-h-24 rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+                  />
                 </label>
               </section>
             ))}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={() => setItems((prev) => [...prev, emptyItem()])} className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">
+            <button
+              type="button"
+              onClick={() => setItems((prev) => [...prev, emptyItem()])}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm hover:bg-accent"
+            >
               <Plus className="size-4" /> Add another item
             </button>
-            <button type="submit" disabled={uploading} className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:ml-auto disabled:opacity-50">
-              {uploading ? "Uploading..." : (initial ? "Save changes" : "Create repair")}
+            <button
+              type="submit"
+              disabled={uploading}
+              className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:ml-auto disabled:opacity-50"
+            >
+              {uploading ? "Uploading..." : initial ? "Save changes" : "Create repair"}
             </button>
           </div>
         </form>
@@ -712,7 +895,13 @@ function RepairDialog({
   );
 }
 
-function IssuePicker({ item, onChange }: { item: DraftItem; onChange: (patch: Partial<DraftItem>) => void }) {
+function IssuePicker({
+  item,
+  onChange,
+}: {
+  item: DraftItem;
+  onChange: (patch: Partial<DraftItem>) => void;
+}) {
   const toggle = (issue: string) => {
     onChange({
       issues: item.issues.includes(issue)
@@ -731,7 +920,9 @@ function IssuePicker({ item, onChange }: { item: DraftItem; onChange: (patch: Pa
             key={issue}
             onClick={() => toggle(issue)}
             className={`rounded-md border px-2 py-1 text-xs ${
-              item.issues.includes(issue) ? "border-ink bg-ink text-paper" : "border-border hover:bg-accent"
+              item.issues.includes(issue)
+                ? "border-ink bg-ink text-paper"
+                : "border-border hover:bg-accent"
             }`}
           >
             {issue}
@@ -835,13 +1026,18 @@ function FilterModal({
       >
         <div className="mb-5 flex items-center justify-between border-b border-border/40 pb-3">
           <h2 className="font-display text-2xl">Repair Filters</h2>
-          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-accent text-muted-foreground hover:text-foreground transition cursor-pointer">
+          <button
+            onClick={onClose}
+            className="rounded-md p-1.5 hover:bg-accent text-muted-foreground hover:text-foreground transition cursor-pointer"
+          >
             <X className="size-4" />
           </button>
         </div>
         <div className="grid gap-4">
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Status</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Status
+            </span>
             <select
               value={status}
               onChange={(e) => onStatus(e.target.value)}
@@ -858,7 +1054,9 @@ function FilterModal({
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Customer</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Customer
+            </span>
             <select
               value={customer}
               onChange={(e) => onCustomer(e.target.value)}
@@ -875,7 +1073,9 @@ function FilterModal({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1.5 font-sans">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Created From</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Created From
+              </span>
               <input
                 type="date"
                 value={createdFrom}
@@ -884,7 +1084,9 @@ function FilterModal({
               />
             </label>
             <label className="grid gap-1.5 font-sans">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Created To</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Created To
+              </span>
               <input
                 type="date"
                 value={createdTo}
@@ -896,7 +1098,9 @@ function FilterModal({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1.5 font-sans">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Expected From</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Expected From
+              </span>
               <input
                 type="date"
                 value={expectedFrom}
@@ -905,7 +1109,9 @@ function FilterModal({
               />
             </label>
             <label className="grid gap-1.5 font-sans">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Expected To</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Expected To
+              </span>
               <input
                 type="date"
                 value={expectedTo}

@@ -308,6 +308,7 @@ interface StoreCtx extends StoreState {
   updateProduct: (id: string, patch: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   addBill: (b: Omit<Bill, "id" | "number" | "createdAt">) => Promise<Bill | null>;
+  deleteBill: (id: string) => Promise<void>;
   addCustomer: (c: Omit<Customer, "id" | "createdAt">) => Promise<Customer | null>;
   updateCustomer: (id: string, patch: Omit<Customer, "id" | "createdAt">) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
@@ -321,19 +322,35 @@ interface StoreCtx extends StoreState {
   updateExpense: (id: string, patch: Omit<Expense, "id" | "createdAt">) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   addPurchaseOrder: (p: Omit<PurchaseOrder, "id" | "number" | "createdAt">) => Promise<void>;
-  updatePurchaseOrder: (id: string, patch: Omit<PurchaseOrder, "id" | "number" | "createdAt">) => Promise<void>;
+  updatePurchaseOrder: (
+    id: string,
+    patch: Omit<PurchaseOrder, "id" | "number" | "createdAt">,
+  ) => Promise<void>;
   deletePurchaseOrder: (id: string) => Promise<void>;
   addReturn: (r: Omit<ReturnRecord, "id" | "number" | "createdAt">) => Promise<void>;
-  updateReturn: (id: string, patch: Omit<ReturnRecord, "id" | "number" | "createdAt">) => Promise<void>;
+  updateReturn: (
+    id: string,
+    patch: Omit<ReturnRecord, "id" | "number" | "createdAt">,
+  ) => Promise<void>;
   deleteReturn: (id: string) => Promise<void>;
   addCategory: (c: Omit<Category, "id" | "createdAt">) => Promise<void>;
   updateCategory: (id: string, patch: Omit<Category, "id" | "createdAt">) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
-  addPaymentAccount: (a: Omit<PaymentAccount, "id" | "createdAt" | "currentBalance">) => Promise<void>;
-  updatePaymentAccount: (id: string, patch: Omit<PaymentAccount, "id" | "createdAt">) => Promise<void>;
+  addPaymentAccount: (
+    a: Omit<PaymentAccount, "id" | "createdAt" | "currentBalance">,
+  ) => Promise<void>;
+  updatePaymentAccount: (
+    id: string,
+    patch: Omit<PaymentAccount, "id" | "createdAt">,
+  ) => Promise<void>;
   deletePaymentAccount: (id: string) => Promise<void>;
-  addAccountTransfer: (t: Omit<AccountTransfer, "id" | "createdAt" | "fromAccountName" | "toAccountName">) => Promise<void>;
-  updateAccountTransfer: (id: string, patch: Omit<AccountTransfer, "id" | "createdAt">) => Promise<void>;
+  addAccountTransfer: (
+    t: Omit<AccountTransfer, "id" | "createdAt" | "fromAccountName" | "toAccountName">,
+  ) => Promise<void>;
+  updateAccountTransfer: (
+    id: string,
+    patch: Omit<AccountTransfer, "id" | "createdAt">,
+  ) => Promise<void>;
   deleteAccountTransfer: (id: string) => Promise<void>;
   addBrand: (b: Omit<Brand, "id" | "createdAt">) => Promise<void>;
   updateBrand: (id: string, patch: Omit<Brand, "id" | "createdAt">) => Promise<void>;
@@ -400,12 +417,21 @@ const repairItemsToDb = (repairId: string, items: RepairItem[]) =>
   }));
 
 const productToDb = (p: Partial<Product>) => {
-  const { branchId, costPrice, sellingPrice, lowStockAlert, trackBySerialNumbers, isActive, createdAt, ...rest } = p;
+  const {
+    branchId,
+    costPrice,
+    sellingPrice,
+    lowStockAlert,
+    trackBySerialNumbers,
+    isActive,
+    createdAt,
+    ...rest
+  } = p;
   return {
     ...rest,
     name: p.name,
     price: p.sellingPrice ?? p.price ?? 0,
-    stock: p.type === "Service" ? 0 : p.stock ?? 0,
+    stock: p.type === "Service" ? 0 : (p.stock ?? 0),
     branch_id: branchId,
     cost_price: costPrice ?? 0,
     selling_price: sellingPrice ?? p.price ?? 0,
@@ -454,7 +480,10 @@ const expenseToDb = (e: Omit<Expense, "id" | "createdAt">) => ({
   status: e.status,
 });
 
-const purchaseOrderToDb = (p: Omit<PurchaseOrder, "id" | "number" | "createdAt">, number?: string) => ({
+const purchaseOrderToDb = (
+  p: Omit<PurchaseOrder, "id" | "number" | "createdAt">,
+  number?: string,
+) => ({
   number,
   branch_id: p.branchId,
   supplier_id: p.supplierId || null,
@@ -501,7 +530,11 @@ const categoryToDb = (c: Omit<Category, "id" | "createdAt">) => ({
   is_active: c.isActive,
 });
 
-const paymentAccountToDb = (a: Omit<PaymentAccount, "id" | "createdAt"> | Omit<PaymentAccount, "id" | "createdAt" | "currentBalance">) => ({
+const paymentAccountToDb = (
+  a:
+    | Omit<PaymentAccount, "id" | "createdAt">
+    | Omit<PaymentAccount, "id" | "createdAt" | "currentBalance">,
+) => ({
   branch_id: a.branchId,
   account_name: a.accountName,
   account_type: a.accountType,
@@ -572,12 +605,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         supabase.from("admins").select("*").order("created_at", { ascending: false }),
         supabase.from("branches").select("*").order("created_at", { ascending: false }),
         supabase.from("products").select("*").order("created_at", { ascending: false }),
-        supabase.from("bills").select("*, items:bill_items(*)").order("created_at", { ascending: false }),
+        supabase
+          .from("bills")
+          .select("*, items:bill_items(*)")
+          .order("created_at", { ascending: false }),
         supabase.from("customers").select("*").order("created_at", { ascending: false }),
-        supabase.from("repairs").select("*, items:repair_items(*)").order("created_at", { ascending: false }),
+        supabase
+          .from("repairs")
+          .select("*, items:repair_items(*)")
+          .order("created_at", { ascending: false }),
         supabase.from("suppliers").select("*").order("created_at", { ascending: false }),
         supabase.from("expenses").select("*").order("created_at", { ascending: false }),
-        supabase.from("purchase_orders").select("*, items:purchase_order_items(*)").order("created_at", { ascending: false }),
+        supabase
+          .from("purchase_orders")
+          .select("*, items:purchase_order_items(*)")
+          .order("created_at", { ascending: false }),
         supabase.from("returns").select("*").order("created_at", { ascending: false }),
         supabase.from("categories").select("*").order("created_at", { ascending: false }),
         supabase.from("payment_accounts").select("*").order("created_at", { ascending: false }),
@@ -588,7 +630,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       const mappedBranches: Branch[] = (branchesRes.data || []).map((b: any) => ({
         ...b,
-        createdAt: b.created_at
+        createdAt: b.created_at,
       }));
 
       const mappedProducts: Product[] = (productsRes.data || []).map((p: any) => ({
@@ -611,14 +653,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         tax: p.tax ?? "No Tax",
         unit: p.unit ?? "Pieces",
         isActive: p.is_active ?? true,
-        createdAt: p.created_at
+        createdAt: p.created_at,
       }));
 
       const mappedBills: Bill[] = (billsRes.data || []).map((b: any) => ({
         ...b,
         branchId: b.branch_id,
         customerId: b.customer_id ?? undefined,
-        saleDate: b.sale_date || b.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+        saleDate:
+          b.sale_date || b.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10),
         dueDate: b.due_date ?? undefined,
         notes: b.notes ?? undefined,
         discountType: b.discount_type || "Percentage",
@@ -628,8 +671,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         items: (b.items || []).map((i: any) => ({
           ...i,
           billId: i.bill_id,
-          productId: i.product_id
-        }))
+          productId: i.product_id,
+        })),
       }));
 
       const mappedCustomers: Customer[] = (customersRes.data || []).map((c: any) => ({
@@ -646,7 +689,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         openingBalanceAmount: Number(c.opening_balance_amount ?? 0),
         balanceType: c.balance_type,
         balanceDate: c.balance_date ?? undefined,
-        createdAt: c.created_at
+        createdAt: c.created_at,
       }));
 
       const mappedRepairs: Repair[] = (repairsRes.data || []).map((r: any) => ({
@@ -673,7 +716,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           assignedTo: i.assigned_to ?? "Unassigned",
           assignedToId: i.assigned_to_id ?? undefined,
           expectedCompletionDate: i.expected_completion_date ?? undefined,
-        }))
+        })),
       }));
 
       const mappedSuppliers: Supplier[] = (suppliersRes.data || []).map((s: any) => ({
@@ -719,35 +762,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdAt: e.created_at,
       }));
 
-      const mappedPurchaseOrders: PurchaseOrder[] = (purchaseOrdersRes.data || []).map((p: any) => ({
-        id: p.id,
-        number: p.number,
-        branchId: p.branch_id,
-        supplierId: p.supplier_id ?? undefined,
-        supplierName: p.supplier_name,
-        purchaseDate: p.purchase_date,
-        expectedDelivery: p.expected_delivery ?? undefined,
-        attachments: p.attachments ?? [],
-        shippingCharge: Number(p.shipping_charge ?? 0),
-        shippingDetails: p.shipping_details ?? undefined,
-        additionalCharges: p.additional_charges ?? [],
-        notes: p.notes ?? undefined,
-        subtotal: Number(p.subtotal ?? 0),
-        grandTotal: Number(p.grand_total ?? 0),
-        status: p.status ?? "Draft",
-        createdAt: p.created_at,
-        items: (p.items || []).map((i: any) => ({
-          id: i.id,
-          purchaseOrderId: i.purchase_order_id,
-          productId: i.product_id ?? undefined,
-          productName: i.product_name,
-          quantity: Number(i.quantity ?? 1),
-          unitPrice: Number(i.unit_price ?? 0),
-          tax: Number(i.tax ?? 0),
-          discountPercent: Number(i.discount_percent ?? 0),
-          total: Number(i.total ?? 0),
-        })),
-      }));
+      const mappedPurchaseOrders: PurchaseOrder[] = (purchaseOrdersRes.data || []).map(
+        (p: any) => ({
+          id: p.id,
+          number: p.number,
+          branchId: p.branch_id,
+          supplierId: p.supplier_id ?? undefined,
+          supplierName: p.supplier_name,
+          purchaseDate: p.purchase_date,
+          expectedDelivery: p.expected_delivery ?? undefined,
+          attachments: p.attachments ?? [],
+          shippingCharge: Number(p.shipping_charge ?? 0),
+          shippingDetails: p.shipping_details ?? undefined,
+          additionalCharges: p.additional_charges ?? [],
+          notes: p.notes ?? undefined,
+          subtotal: Number(p.subtotal ?? 0),
+          grandTotal: Number(p.grand_total ?? 0),
+          status: p.status ?? "Draft",
+          createdAt: p.created_at,
+          items: (p.items || []).map((i: any) => ({
+            id: i.id,
+            purchaseOrderId: i.purchase_order_id,
+            productId: i.product_id ?? undefined,
+            productName: i.product_name,
+            quantity: Number(i.quantity ?? 1),
+            unitPrice: Number(i.unit_price ?? 0),
+            tax: Number(i.tax ?? 0),
+            discountPercent: Number(i.discount_percent ?? 0),
+            total: Number(i.total ?? 0),
+          })),
+        }),
+      );
 
       const mappedReturns: ReturnRecord[] = (returnsRes.data || []).map((r: any) => ({
         id: r.id,
@@ -771,32 +816,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdAt: c.created_at,
       }));
 
-      const mappedPaymentAccounts: PaymentAccount[] = (paymentAccountsRes.data || []).map((a: any) => ({
-        id: a.id,
-        branchId: a.branch_id,
-        accountName: a.account_name,
-        accountType: a.account_type,
-        status: a.status,
-        accountNumber: a.account_number ?? undefined,
-        openingBalance: Number(a.opening_balance ?? 0),
-        currentBalance: Number(a.current_balance ?? 0),
-        description: a.description ?? undefined,
-        createdAt: a.created_at,
-      }));
+      const mappedPaymentAccounts: PaymentAccount[] = (paymentAccountsRes.data || []).map(
+        (a: any) => ({
+          id: a.id,
+          branchId: a.branch_id,
+          accountName: a.account_name,
+          accountType: a.account_type,
+          status: a.status,
+          accountNumber: a.account_number ?? undefined,
+          openingBalance: Number(a.opening_balance ?? 0),
+          currentBalance: Number(a.current_balance ?? 0),
+          description: a.description ?? undefined,
+          createdAt: a.created_at,
+        }),
+      );
 
-      const mappedAccountTransfers: AccountTransfer[] = (accountTransfersRes.data || []).map((t: any) => ({
-        id: t.id,
-        branchId: t.branch_id,
-        fromAccountId: t.from_account_id,
-        fromAccountName: t.from_account_name,
-        toAccountId: t.to_account_id,
-        toAccountName: t.to_account_name,
-        transferAmount: Number(t.transfer_amount ?? 0),
-        transferDate: t.transfer_date,
-        referenceNumber: t.reference_number,
-        description: t.description ?? undefined,
-        createdAt: t.created_at,
-      }));
+      const mappedAccountTransfers: AccountTransfer[] = (accountTransfersRes.data || []).map(
+        (t: any) => ({
+          id: t.id,
+          branchId: t.branch_id,
+          fromAccountId: t.from_account_id,
+          fromAccountName: t.from_account_name,
+          toAccountId: t.to_account_id,
+          toAccountName: t.to_account_name,
+          transferAmount: Number(t.transfer_amount ?? 0),
+          transferDate: t.transfer_date,
+          referenceNumber: t.reference_number,
+          description: t.description ?? undefined,
+          createdAt: t.created_at,
+        }),
+      );
 
       const mappedBrands: Brand[] = (brandsRes.data || []).map((b: any) => ({
         id: b.id,
@@ -887,24 +936,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSession(nextSession);
         return { ok: true, role: "admin" };
       }
-      
+
       const { data: branch, error } = await supabase
         .from("branches")
         .select("*")
         .eq("email", email)
         .eq("password", password)
         .maybeSingle();
-        
+
       if (error) {
         console.error("Supabase branch login error:", error);
       }
-        
+
       if (branch) {
         const nextSession: Session = { role: "branch", branchId: branch.id, email };
         setSession(nextSession);
         return { ok: true, role: "branch" };
       }
-      
+
       return { ok: false, error: "Invalid credentials" };
     },
     logout: () => {
@@ -962,50 +1011,66 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Use a timestamp-based invoice number — guaranteed unique across
       // concurrent users, deletions, and page refreshes.
       const number = `INV-${Date.now()}`;
-      const { items, branchId, paymentMethod, customerId, saleDate, dueDate, notes, discountType, discountAmount, ...billData } = b;
-      
+      const {
+        items,
+        branchId,
+        paymentMethod,
+        customerId,
+        saleDate,
+        dueDate,
+        notes,
+        discountType,
+        discountAmount,
+        ...billData
+      } = b;
+
       const { data: newBill, error } = await supabase
         .from("bills")
-        .insert([{ 
-          ...billData, 
-          payment_method: paymentMethod, 
-          branch_id: branchId, 
-          customer_id: customerId || null,
-          sale_date: saleDate,
-          due_date: dueDate || null,
-          notes: notes || null,
-          discount_type: discountType,
-          discount_amount: discountAmount,
-          number 
-        }])
+        .insert([
+          {
+            ...billData,
+            payment_method: paymentMethod,
+            branch_id: branchId,
+            customer_id: customerId || null,
+            sale_date: saleDate,
+            due_date: dueDate || null,
+            notes: notes || null,
+            discount_type: discountType,
+            discount_amount: discountAmount,
+            number,
+          },
+        ])
         .select()
         .single();
-        
+
       if (error) throw new Error(error.message);
-        
+
       if (newBill && items.length > 0) {
-        const billItems = items.map(item => ({
+        const billItems = items.map((item) => ({
           bill_id: newBill.id,
           // Repair-service items use a synthetic productId — store null for product_id
           product_id: item.productId.startsWith("repair-item-") ? null : item.productId,
           name: item.name,
           price: item.price,
-          qty: item.qty
+          qty: item.qty,
         }));
         const { error: itemsError } = await supabase.from("bill_items").insert(billItems);
         if (itemsError) throw new Error(itemsError.message);
-        
+
         // Decrement stock only for real product items (not repair service lines)
         for (const item of items) {
           if (item.productId.startsWith("repair-item-")) continue;
-          const product = state.products.find(p => p.id === item.productId);
+          const product = state.products.find((p) => p.id === item.productId);
           if (product) {
-            const { error: stockError } = await supabase.from("products").update({ stock: product.stock - item.qty }).eq("id", item.productId);
+            const { error: stockError } = await supabase
+              .from("products")
+              .update({ stock: product.stock - item.qty })
+              .eq("id", item.productId);
             if (stockError) console.error("Stock update failed", stockError);
           }
         }
       }
-      
+
       await refreshData();
       return {
         ...newBill,
@@ -1017,8 +1082,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         discountType: newBill.discount_type,
         discountAmount: Number(newBill.discount_amount),
         createdAt: newBill.created_at,
-        items
+        items,
       } as any;
+    },
+    deleteBill: async (id) => {
+      if (session?.role !== "admin") {
+        throw new Error("Unauthorized: Only admins can delete bills.");
+      }
+      const bill = state.bills.find((b) => b.id === id);
+      if (bill && bill.items) {
+        for (const item of bill.items) {
+          if (item.productId && !item.productId.startsWith("repair-item-")) {
+            const product = state.products.find((p) => p.id === item.productId);
+            if (product) {
+              const { error: stockError } = await supabase
+                .from("products")
+                .update({ stock: product.stock + item.qty })
+                .eq("id", item.productId);
+              if (stockError) console.error("Stock restore failed", stockError);
+            }
+          }
+        }
+      }
+      const { error } = await supabase.from("bills").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
     },
     addCustomer: async (c) => {
       const { data, error } = await supabase
@@ -1062,13 +1150,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const { items, branchId, customerId, customerName } = r;
       const { data: repair, error } = await supabase
         .from("repairs")
-        .insert([{
-          number,
-          branch_id: branchId,
-          customer_id: customerId || null,
-          customer_name: customerName,
-          status: "Open",
-        }])
+        .insert([
+          {
+            number,
+            branch_id: branchId,
+            customer_id: customerId || null,
+            customer_name: customerName,
+            status: "Open",
+          },
+        ])
         .select()
         .single();
       if (error) throw new Error(error.message);
@@ -1104,11 +1194,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .eq("id", id);
       if (error) throw new Error(error.message);
 
-      const { error: deleteItemsError } = await supabase.from("repair_items").delete().eq("repair_id", id);
+      const { error: deleteItemsError } = await supabase
+        .from("repair_items")
+        .delete()
+        .eq("repair_id", id);
       if (deleteItemsError) throw new Error(deleteItemsError.message);
 
       if (items.length > 0) {
-        const { error: itemsError } = await supabase.from("repair_items").insert(repairItemsToDb(id, items));
+        const { error: itemsError } = await supabase
+          .from("repair_items")
+          .insert(repairItemsToDb(id, items));
         if (itemsError) throw new Error(itemsError.message);
       }
 
@@ -1158,18 +1253,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .single();
       if (error) throw new Error(error.message);
       if (data && p.items.length > 0) {
-        const { error: itemsError } = await supabase.from("purchase_order_items").insert(purchaseItemsToDb(data.id, p.items));
+        const { error: itemsError } = await supabase
+          .from("purchase_order_items")
+          .insert(purchaseItemsToDb(data.id, p.items));
         if (itemsError) throw new Error(itemsError.message);
       }
       await refreshData();
     },
     updatePurchaseOrder: async (id, patch) => {
-      const { error } = await supabase.from("purchase_orders").update(purchaseOrderToDb(patch)).eq("id", id);
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update(purchaseOrderToDb(patch))
+        .eq("id", id);
       if (error) throw new Error(error.message);
-      const { error: deleteItemsError } = await supabase.from("purchase_order_items").delete().eq("purchase_order_id", id);
+      const { error: deleteItemsError } = await supabase
+        .from("purchase_order_items")
+        .delete()
+        .eq("purchase_order_id", id);
       if (deleteItemsError) throw new Error(deleteItemsError.message);
       if (patch.items.length > 0) {
-        const { error: itemsError } = await supabase.from("purchase_order_items").insert(purchaseItemsToDb(id, patch.items));
+        const { error: itemsError } = await supabase
+          .from("purchase_order_items")
+          .insert(purchaseItemsToDb(id, patch.items));
         if (itemsError) throw new Error(itemsError.message);
       }
       await refreshData();
@@ -1217,7 +1322,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await refreshData();
     },
     updatePaymentAccount: async (id, patch) => {
-      const { error } = await supabase.from("payment_accounts").update(paymentAccountToDb(patch)).eq("id", id);
+      const { error } = await supabase
+        .from("payment_accounts")
+        .update(paymentAccountToDb(patch))
+        .eq("id", id);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1230,16 +1338,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const from = state.paymentAccounts.find((a) => a.id === t.fromAccountId);
       const to = state.paymentAccounts.find((a) => a.id === t.toAccountId);
       if (!from || !to) throw new Error("Select valid accounts");
-      const referenceNumber = t.referenceNumber || `TRF-${new Date().getFullYear()}-${1000 + state.accountTransfers.length + 1}`;
-      const payload = { ...t, referenceNumber, fromAccountName: from.accountName, toAccountName: to.accountName };
-      const { error } = await supabase.from("account_transfers").insert([accountTransferToDb(payload)]);
+      const referenceNumber =
+        t.referenceNumber ||
+        `TRF-${new Date().getFullYear()}-${1000 + state.accountTransfers.length + 1}`;
+      const payload = {
+        ...t,
+        referenceNumber,
+        fromAccountName: from.accountName,
+        toAccountName: to.accountName,
+      };
+      const { error } = await supabase
+        .from("account_transfers")
+        .insert([accountTransferToDb(payload)]);
       if (error) throw new Error(error.message);
-      await supabase.from("payment_accounts").update({ current_balance: from.currentBalance - t.transferAmount }).eq("id", from.id);
-      await supabase.from("payment_accounts").update({ current_balance: to.currentBalance + t.transferAmount }).eq("id", to.id);
+      await supabase
+        .from("payment_accounts")
+        .update({ current_balance: from.currentBalance - t.transferAmount })
+        .eq("id", from.id);
+      await supabase
+        .from("payment_accounts")
+        .update({ current_balance: to.currentBalance + t.transferAmount })
+        .eq("id", to.id);
       await refreshData();
     },
     updateAccountTransfer: async (id, patch) => {
-      const { error } = await supabase.from("account_transfers").update(accountTransferToDb(patch)).eq("id", id);
+      const { error } = await supabase
+        .from("account_transfers")
+        .update(accountTransferToDb(patch))
+        .eq("id", id);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1264,26 +1390,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await refreshData();
     },
     addStaff: async (s) => {
-      const { error } = await supabase.from("staff").insert([{
-        branch_id: s.branchId,
-        name: s.name,
-        phone: s.phone || null,
-        email: s.email || null,
-        role: s.role || null,
-        status: s.status,
-      }]);
+      const { error } = await supabase.from("staff").insert([
+        {
+          branch_id: s.branchId,
+          name: s.name,
+          phone: s.phone || null,
+          email: s.email || null,
+          role: s.role || null,
+          status: s.status,
+        },
+      ]);
       if (error) throw new Error(error.message);
       await refreshData();
     },
     updateStaff: async (id, patch) => {
-      const { error } = await supabase.from("staff").update({
-        branch_id: patch.branchId,
-        name: patch.name,
-        phone: patch.phone || null,
-        email: patch.email || null,
-        role: patch.role || null,
-        status: patch.status,
-      }).eq("id", id);
+      const { error } = await supabase
+        .from("staff")
+        .update({
+          branch_id: patch.branchId,
+          name: patch.name,
+          phone: patch.phone || null,
+          email: patch.email || null,
+          role: patch.role || null,
+          status: patch.status,
+        })
+        .eq("id", id);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1305,11 +1436,10 @@ export const useStore = () => {
 
 export const ADMIN_CREDS = { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
 
-
 export const fmtMoney = (n: number) =>
-  new Intl.NumberFormat(import.meta.env.VITE_LOCALE || "en-IN", { 
-    style: "currency", 
-    currency: import.meta.env.VITE_CURRENCY || "INR" 
+  new Intl.NumberFormat(import.meta.env.VITE_LOCALE || "en-IN", {
+    style: "currency",
+    currency: import.meta.env.VITE_CURRENCY || "INR",
   }).format(n);
 
 export const fmtDate = (iso: string) =>

@@ -2,7 +2,10 @@ import logoUrl from "/logo.png";
 import { fmtDate, fmtMoney, type Bill, type Branch } from "@/lib/store";
 
 const COMPANY_NAME = import.meta.env.VITE_COMPANY_NAME || "E REPAIR INNOVATIVE";
-const COMPANY_ADDRESS = (import.meta.env.VITE_COMPANY_ADDRESS || "ERepair Innovative|Shalom Building LIC Junction,|Pattom, Thiruvananthapuram,|Kerala. Pin 695004").split("|");
+const COMPANY_ADDRESS = (
+  import.meta.env.VITE_COMPANY_ADDRESS ||
+  "ERepair Innovative|Shalom Building LIC Junction,|Pattom, Thiruvananthapuram,|Kerala. Pin 695004"
+).split("|");
 const PAYMENT_METHODS = import.meta.env.VITE_PAYMENT_METHODS || "Cash / Card";
 
 export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch }) {
@@ -49,9 +52,7 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
             <div className="text-neutral-600 whitespace-pre-line">
               {branch?.address ?? COMPANY_ADDRESS.join("\n")}
             </div>
-            {branch?.email && (
-              <div className="text-neutral-600">{branch.email}</div>
-            )}
+            {branch?.email && <div className="text-neutral-600">{branch.email}</div>}
           </div>
           <div>
             <div className="uppercase tracking-widest text-neutral-500">Billed to</div>

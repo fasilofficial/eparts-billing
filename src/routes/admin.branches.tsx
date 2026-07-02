@@ -4,6 +4,7 @@ import { useStore, fmtDate, type Branch } from "@/lib/store";
 import { PageHeader } from "@/components/DashboardLayout";
 import { Plus, Trash2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/admin/branches")({ component: AdminBranches });
 
@@ -11,6 +12,7 @@ function AdminBranches() {
   const { branches, products, bills, addBranch, updateBranch, deleteBranch } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Branch | null>(null);
+  const confirm = useConfirm();
 
   return (
     <>
@@ -59,7 +61,12 @@ function AdminBranches() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (confirm("Delete this branch?")) {
+                      if (
+                        await confirm({
+                          title: "Delete branch?",
+                          description: `Are you sure you want to delete branch ${b.name}?`,
+                        })
+                      ) {
                         try {
                           await deleteBranch(b.id);
                           toast.success("Branch removed");

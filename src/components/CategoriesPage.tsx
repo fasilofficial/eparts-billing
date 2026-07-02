@@ -3,9 +3,11 @@ import { PageHeader, Stat } from "@/components/DashboardLayout";
 import { useStore, type Category } from "@/lib/store";
 import { FolderTree, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export function CategoriesPage() {
   const { session, categories, addCategory, updateCategory, deleteCategory } = useStore();
+  const confirm = useConfirm();
   const [tab, setTab] = useState<"Product" | "Expense">("Product");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
@@ -67,15 +69,17 @@ export function CategoriesPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold uppercase tracking-wider ${tab === "Product" ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"}`}>
+            <span
+              className={`text-xs font-semibold uppercase tracking-wider ${tab === "Product" ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"}`}
+            >
               Inventory
             </span>
-            {tab === "Product" && (
-              <span className="size-2 rounded-full bg-blue-500 animate-ping" />
-            )}
+            {tab === "Product" && <span className="size-2 rounded-full bg-blue-500 animate-ping" />}
           </div>
           <div className="mt-2 font-display text-2xl">Product Categories</div>
-          <p className="mt-1 text-xs text-muted-foreground">For products, materials, and services.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            For products, materials, and services.
+          </p>
         </button>
 
         <button
@@ -90,15 +94,17 @@ export function CategoriesPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-semibold uppercase tracking-wider ${tab === "Expense" ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"}`}>
+            <span
+              className={`text-xs font-semibold uppercase tracking-wider ${tab === "Expense" ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"}`}
+            >
               Finance & Costs
             </span>
-            {tab === "Expense" && (
-              <span className="size-2 rounded-full bg-rose-500 animate-ping" />
-            )}
+            {tab === "Expense" && <span className="size-2 rounded-full bg-rose-500 animate-ping" />}
           </div>
           <div className="mt-2 font-display text-2xl">Expense Categories</div>
-          <p className="mt-1 text-xs text-muted-foreground">For overheads, operational, and office costs.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            For overheads, operational, and office costs.
+          </p>
         </button>
       </div>
 
@@ -143,7 +149,9 @@ export function CategoriesPage() {
           </div>
           <div className="mt-4 text-base font-semibold">No categories found</div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {tab === "Product" ? "Product categories will appear here" : "Expense categories will appear here"}
+            {tab === "Product"
+              ? "Product categories will appear here"
+              : "Expense categories will appear here"}
           </p>
           {isAdmin && (
             <button
@@ -206,7 +214,13 @@ export function CategoriesPage() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!confirm(`Delete ${c.name}?`)) return;
+                      if (
+                        !(await confirm({
+                          title: "Delete category?",
+                          description: `Are you sure you want to delete category ${c.name}?`,
+                        }))
+                      )
+                        return;
                       try {
                         await deleteCategory(c.id);
                         toast.success("Category deleted");
@@ -299,10 +313,18 @@ function CategoryDialog({
           </button>
         </div>
         <form className="grid gap-4" onSubmit={submit}>
-          <Field label="Category Name *" value={name} onChange={setName} required placeholder="e.g., Electronics or Travel" />
-          
+          <Field
+            label="Category Name *"
+            value={name}
+            onChange={setName}
+            required
+            placeholder="e.g., Electronics or Travel"
+          />
+
           <label className="grid gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Parent Category</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">
+              Parent Category
+            </span>
             <select
               value={parentCategoryId}
               onChange={(e) => setParentCategoryId(e.target.value)}

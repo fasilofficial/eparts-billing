@@ -118,7 +118,9 @@ function AdminInventory() {
                   );
                 })}
                 {items.length === 0 && (
-                  <li className="px-5 py-8 text-center text-sm text-muted-foreground">No products.</li>
+                  <li className="px-5 py-8 text-center text-sm text-muted-foreground">
+                    No products.
+                  </li>
                 )}
               </ul>
             </section>

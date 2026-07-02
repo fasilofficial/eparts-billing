@@ -4,18 +4,21 @@ import { useStore, fmtMoney, fmtDate, type Bill } from "@/lib/store";
 import { PageHeader, Stat } from "@/components/DashboardLayout";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
-import { X, Printer } from "lucide-react";
+import { X, Printer, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/admin/bills")({ component: AdminBills });
 
 function AdminBills() {
-  const { bills, branches } = useStore();
+  const { bills, branches, deleteBill } = useStore();
   const [branchFilter, setBranchFilter] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [minAmt, setMinAmt] = useState("");
   const [maxAmt, setMaxAmt] = useState("");
   const [viewing, setViewing] = useState<Bill | null>(null);
+  const confirm = useConfirm();
 
   const filtered = useMemo(() => {
     return bills.filter((b) => {
@@ -68,7 +71,7 @@ function AdminBills() {
         description="Every invoice across the network."
         actions={
           <ExportExcelButton
-            filename={`bills-report-${new Date().toISOString().split('T')[0]}`}
+            filename={`bills-report-${new Date().toISOString().split("T")[0]}`}
             headers={[
               "Invoice",
               "Branch",
@@ -141,6 +144,7 @@ function AdminBills() {
               <th className="px-5 py-3 text-left font-medium">Payment</th>
               <th className="px-5 py-3 text-left font-medium">Date</th>
               <th className="px-5 py-3 text-right font-medium">Total</th>
+              <th className="px-5 py-3 text-right font-medium w-16"></th>
             </tr>
           </thead>
           <tbody>
@@ -158,12 +162,36 @@ function AdminBills() {
                   <td className="px-5 py-3 text-muted-foreground">{b.paymentMethod ?? "Cash"}</td>
                   <td className="px-5 py-3 text-muted-foreground">{fmtDate(b.createdAt)}</td>
                   <td className="px-5 py-3 text-right num">{fmtMoney(b.total)}</td>
+                  <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (
+                          await confirm({
+                            title: "Delete bill?",
+                            description: `Are you sure you want to delete bill ${b.number}? This will restore its items to stock.`,
+                          })
+                        ) {
+                          try {
+                            await deleteBill(b.id);
+                            toast.success("Bill deleted");
+                          } catch (e) {
+                            toast.error(e instanceof Error ? e.message : "Failed to delete bill");
+                          }
+                        }
+                      }}
+                      className="rounded-md p-1 text-destructive hover:bg-accent inline-flex items-center"
+                      title="Delete Bill"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
                   No bills match these filters.
                 </td>
               </tr>
@@ -179,19 +207,47 @@ function AdminBills() {
         >
           <div className="mx-auto my-8 max-w-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex justify-between text-paper">
-              <button
-                onClick={() => {
-                  const oldTitle = document.title;
-                  const safeCustomer = (viewing.customer || "Walk-in").replace(/[^a-z0-9]/gi, '_');
-                  const dateStr = new Date(viewing.createdAt).toISOString().split('T')[0];
-                  document.title = `${viewing.number}_${safeCustomer}_${dateStr}`;
-                  window.print();
-                  setTimeout(() => { document.title = oldTitle; }, 100);
-                }}
-                className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90"
-              >
-                <Printer className="size-4" /> Print
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const oldTitle = document.title;
+                    const safeCustomer = (viewing.customer || "Walk-in").replace(
+                      /[^a-z0-9]/gi,
+                      "_",
+                    );
+                    const dateStr = new Date(viewing.createdAt).toISOString().split("T")[0];
+                    document.title = `${viewing.number}_${safeCustomer}_${dateStr}`;
+                    window.print();
+                    setTimeout(() => {
+                      document.title = oldTitle;
+                    }, 100);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-md bg-paper px-3 py-1.5 text-sm text-ink hover:opacity-90"
+                >
+                  <Printer className="size-4" /> Print
+                </button>
+                <button
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: "Delete bill?",
+                        description: `Are you sure you want to delete bill ${viewing.number}? This will restore its items to stock.`,
+                      })
+                    ) {
+                      try {
+                        await deleteBill(viewing.id);
+                        toast.success("Bill deleted");
+                        setViewing(null);
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Failed to delete bill");
+                      }
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-md bg-destructive px-3 py-1.5 text-sm text-destructive-foreground hover:opacity-90"
+                >
+                  <Trash2 className="size-4" /> Delete
+                </button>
+              </div>
               <button
                 onClick={() => setViewing(null)}
                 className="rounded-md bg-paper p-1.5 text-ink"

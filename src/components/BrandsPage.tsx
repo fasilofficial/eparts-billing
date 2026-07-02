@@ -3,9 +3,11 @@ import { PageHeader, Stat } from "@/components/DashboardLayout";
 import { useStore, type Brand } from "@/lib/store";
 import { Award, Pencil, Plus, Trash2, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 export function BrandsPage() {
   const { session, brands, addBrand, updateBrand, deleteBrand } = useStore();
+  const confirm = useConfirm();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [open, setOpen] = useState(false);
@@ -73,9 +75,7 @@ export function BrandsPage() {
           <option value="Active">Active Only</option>
           <option value="Inactive">Inactive Only</option>
         </select>
-        <div className="text-xs text-muted-foreground sm:ml-auto">
-          {scoped.length} brands found
-        </div>
+        <div className="text-xs text-muted-foreground sm:ml-auto">{scoped.length} brands found</div>
       </div>
 
       {scoped.length === 0 ? (
@@ -84,7 +84,9 @@ export function BrandsPage() {
             <Award className="size-6 text-muted-foreground animate-pulse" />
           </div>
           <h2 className="mt-4 text-base font-semibold">No brands found</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Global product brands list is currently empty.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Global product brands list is currently empty.
+          </p>
           {isAdmin && (
             <button
               onClick={() => {
@@ -137,7 +139,13 @@ export function BrandsPage() {
                         </button>
                         <button
                           onClick={async () => {
-                            if (!confirm(`Delete ${b.name}?`)) return;
+                            if (
+                              !(await confirm({
+                                title: "Delete brand?",
+                                description: `Are you sure you want to delete ${b.name}?`,
+                              }))
+                            )
+                              return;
                             try {
                               await deleteBrand(b.id);
                               toast.success("Brand deleted successfully");
@@ -222,7 +230,9 @@ function BrandDialog({
         </div>
         <form className="space-y-4" onSubmit={submit}>
           <label className="grid gap-1.5 font-sans">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Brand Name *</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">
+              Brand Name *
+            </span>
             <input
               required
               value={name}

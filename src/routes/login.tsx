@@ -38,7 +38,6 @@ function LoginPage() {
     signInWith(email, password);
   };
 
-
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Left panel – visible on large screens */}
@@ -122,7 +121,6 @@ function LoginPage() {
               )}
             </button>
           </form>
-
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { StoreProvider } from "@/lib/store";
 import { Toaster } from "@/components/ui/sonner";
+import { ConfirmProvider } from "@/components/ConfirmProvider";
 
 import appCss from "../styles.css?url";
 
@@ -61,23 +62,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "E Repair Innovative — Turning Tech Enthusiasts to Expert's" },
       {
         name: "description",
-        content: "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
+        content:
+          "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
       },
-      { property: "og:title", content: "E Repair Innovative — Turning Tech Enthusiasts to Expert's" },
-      { name: "twitter:title", content: "E Repair Innovative — Turning Tech Enthusiasts to Expert's" },
+      {
+        property: "og:title",
+        content: "E Repair Innovative — Turning Tech Enthusiasts to Expert's",
+      },
+      {
+        name: "twitter:title",
+        content: "E Repair Innovative — Turning Tech Enthusiasts to Expert's",
+      },
       {
         property: "og:description",
-        content: "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
+        content:
+          "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
       },
       {
         name: "twitter:description",
-        content: "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
+        content:
+          "E Repair Innovative — Professional repair management & billing platform. Thiruvananthapuram, Kerala.",
       },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
-  // Vite injects CSS in index.html for SPA builds; only SSR needs this link.
-  links: isSpaBuild ? [] : [{ rel: "stylesheet", href: appCss }],
+    // Vite injects CSS in index.html for SPA builds; only SSR needs this link.
+    links: isSpaBuild ? [] : [{ rel: "stylesheet", href: appCss }],
   }),
   ...(isSpaBuild ? {} : { shellComponent: RootShell }),
   component: RootComponent,
@@ -104,9 +114,11 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
-        {isSpaBuild ? <HeadContent /> : null}
-        <Outlet />
-        <Toaster />
+        <ConfirmProvider>
+          {isSpaBuild ? <HeadContent /> : null}
+          <Outlet />
+          <Toaster />
+        </ConfirmProvider>
       </StoreProvider>
     </QueryClientProvider>
   );

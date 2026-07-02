@@ -48,7 +48,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
   // Read repairId from URL search params (set when navigating from Repairs page)
   const search = useSearch({ strict: false }) as { repairId?: string };
   const linkedRepairId = search?.repairId;
-  
+
   // Sale details state
   const [saleDate, setSaleDate] = useState(todayFormatted());
   const [dueDate, setDueDate] = useState("");
@@ -58,7 +58,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
     name: string;
     phone: string;
   } | null>(null);
-  
+
   // Dialog Open States
   const [custModalOpen, setCustModalOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -72,7 +72,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
   const [notes, setNotes] = useState("");
   const [orderDiscountType, setOrderDiscountType] = useState<"Percentage" | "Fixed">("Percentage");
   const [orderDiscountValue, setOrderDiscountValue] = useState("0");
-  
+
   // Payment Modal parameters
   const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Other">("Cash");
   const [amountToCollect, setAmountToCollect] = useState("0.00");
@@ -85,7 +85,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
   });
 
   const [issued, setIssued] = useState<Bill | null>(null);
-  const [linkedRepair, setLinkedRepair] = useState<typeof repairs[number] | null>(null);
+  const [linkedRepair, setLinkedRepair] = useState<(typeof repairs)[number] | null>(null);
 
   // Pre-populate form when a repairId is present in the URL
   useEffect(() => {
@@ -118,7 +118,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
       discountValue: 0,
     }));
     setItems(repairLineItems);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedRepairId, repairs, customers]);
 
   // Filtered products list for product search dropdown
@@ -172,9 +172,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
     return items.map((item) => {
       const itemBase = item.price * item.qty;
       const itemDiscount =
-        item.discountType === "%"
-          ? itemBase * (item.discountValue / 100)
-          : item.discountValue;
+        item.discountType === "%" ? itemBase * (item.discountValue / 100) : item.discountValue;
       const subtotalAfterDiscount = Math.max(0, itemBase - itemDiscount);
       const itemTax = subtotalAfterDiscount * (item.taxPercent / 100);
       const total = subtotalAfterDiscount + itemTax;
@@ -187,7 +185,10 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
     });
   }, [items]);
 
-  const itemsSubtotal = calculatedItems.reduce((s, it) => s + (it.price * it.qty - it.itemDiscount), 0);
+  const itemsSubtotal = calculatedItems.reduce(
+    (s, it) => s + (it.price * it.qty - it.itemDiscount),
+    0,
+  );
   const itemsTax = calculatedItems.reduce((s, it) => s + it.itemTax, 0);
 
   const orderDiscount = useMemo(() => {
@@ -206,9 +207,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
     setItems((prev) => {
       const existing = prev.find((i) => i.productId === productId);
       if (existing) {
-        return prev.map((i) =>
-          i.productId === productId ? { ...i, qty: i.qty + 1 } : i,
-        );
+        return prev.map((i) => (i.productId === productId ? { ...i, qty: i.qty + 1 } : i));
       }
       return [
         ...prev,
@@ -236,9 +235,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
     key: K,
     val: ExtendedBillItem[K],
   ) => {
-    setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, [key]: val } : i)),
-    );
+    setItems((prev) => prev.map((i) => (i.productId === productId ? { ...i, [key]: val } : i)));
   };
 
   const openPaymentCollector = () => {
@@ -327,18 +324,27 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
             <span>New Sale</span>
           </div>
         }
-        description={`Create invoices and collect payments. ${new Date(saleDate).toLocaleDateString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}`}
+        description={`Create invoices and collect payments. ${new Date(saleDate).toLocaleDateString(
+          "en-US",
+          {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          },
+        )}`}
         actions={
           <div className="flex flex-wrap gap-2 sm:ml-auto">
-            <button type="button" className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition">
+            <button
+              type="button"
+              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition"
+            >
               Drafts
             </button>
-            <button type="button" className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition">
+            <button
+              type="button"
+              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition"
+            >
               Save as Draft
             </button>
             <button
@@ -360,7 +366,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               <Wrench className="size-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Billing for Repair</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                Billing for Repair
+              </div>
               <div className="font-bold text-foreground">
                 {linkedRepair.number} · {linkedRepair.customerName}
               </div>
@@ -385,7 +393,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Customer select box */}
             <div className="space-y-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Customer *</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                Customer *
+              </span>
               {!selectedCustomer ? (
                 <div
                   onClick={() => setCustModalOpen(true)}
@@ -412,7 +422,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                       {selectedCustomer.name[0]?.toUpperCase() || "W"}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-foreground">{selectedCustomer.name}</div>
+                      <div className="text-sm font-bold text-foreground">
+                        {selectedCustomer.name}
+                      </div>
                       <div className="text-xs text-muted-foreground">{selectedCustomer.phone}</div>
                     </div>
                   </div>
@@ -423,7 +435,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
             {/* Sale Date */}
             <label className="grid gap-1.5 font-sans">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Sale Date *</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                Sale Date *
+              </span>
               <input
                 type="date"
                 required
@@ -435,7 +449,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
             {/* Due Date */}
             <label className="grid gap-1.5 font-sans">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Due Date</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                Due Date
+              </span>
               <input
                 type="date"
                 value={dueDate}
@@ -468,7 +484,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               </select>
             )}
           </div>
-          
+
           {/* Search bar row */}
           <div className="p-4 border-b border-border bg-background/50 flex gap-2 relative">
             <div className="relative w-full">
@@ -479,7 +495,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full rounded-md border border-border bg-background pl-10 pr-4 py-2 text-sm outline-none focus:border-ink"
               />
-              
+
               {/* Product search suggestions */}
               {query && (
                 <ul className="absolute left-0 right-0 top-full mt-2 z-40 bg-card border border-border rounded-md shadow-paper overflow-hidden divide-y divide-border">
@@ -517,7 +533,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 <ShoppingCart className="size-6 text-muted-foreground" />
               </div>
               <h3 className="font-bold text-foreground/80">No items added yet</h3>
-              <p className="text-xs text-muted-foreground">Search and select products above to add them to this sale</p>
+              <p className="text-xs text-muted-foreground">
+                Search and select products above to add them to this sale
+              </p>
             </div>
           ) : (
             <div className="responsive-table">
@@ -536,7 +554,10 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 </thead>
                 <tbody>
                   {calculatedItems.map((item, idx) => (
-                    <tr key={item.productId} className="border-b border-border/60 hover:bg-muted/10 transition">
+                    <tr
+                      key={item.productId}
+                      className="border-b border-border/60 hover:bg-muted/10 transition"
+                    >
                       <td className="px-4 py-3 font-semibold text-muted-foreground">{idx + 1}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -545,7 +566,11 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                           </div>
                           <div>
                             <div className="font-bold text-foreground">{item.name}</div>
-                            {item.sku && <div className="text-[10px] text-muted-foreground">SKU: {item.sku}</div>}
+                            {item.sku && (
+                              <div className="text-[10px] text-muted-foreground">
+                                SKU: {item.sku}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -553,7 +578,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setItemProperty(item.productId, "qty", Math.max(1, item.qty - 1))}
+                            onClick={() =>
+                              setItemProperty(item.productId, "qty", Math.max(1, item.qty - 1))
+                            }
                             className="rounded-md border border-border p-1 hover:bg-accent"
                           >
                             <Minus className="size-3" />
@@ -561,7 +588,13 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                           <input
                             type="number"
                             value={item.qty}
-                            onChange={(e) => setItemProperty(item.productId, "qty", Math.max(1, Number(e.target.value) || 1))}
+                            onChange={(e) =>
+                              setItemProperty(
+                                item.productId,
+                                "qty",
+                                Math.max(1, Number(e.target.value) || 1),
+                              )
+                            }
                             className="w-12 rounded-md border border-border bg-background py-1 text-center text-sm font-semibold num"
                           />
                           <button
@@ -577,14 +610,18 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                         <input
                           type="number"
                           value={item.price}
-                          onChange={(e) => setItemProperty(item.productId, "price", Number(e.target.value) || 0)}
+                          onChange={(e) =>
+                            setItemProperty(item.productId, "price", Number(e.target.value) || 0)
+                          }
                           className="w-full rounded-md border border-border bg-background px-2.5 py-1 text-sm font-semibold num"
                         />
                       </td>
                       <td className="px-4 py-3">
                         <select
                           value={item.taxPercent}
-                          onChange={(e) => setItemProperty(item.productId, "taxPercent", Number(e.target.value))}
+                          onChange={(e) =>
+                            setItemProperty(item.productId, "taxPercent", Number(e.target.value))
+                          }
                           className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm outline-none"
                         >
                           <option value="0">No Tax</option>
@@ -598,7 +635,13 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                         <div className="flex gap-1.5">
                           <select
                             value={item.discountType}
-                            onChange={(e) => setItemProperty(item.productId, "discountType", e.target.value as "%" | "₹")}
+                            onChange={(e) =>
+                              setItemProperty(
+                                item.productId,
+                                "discountType",
+                                e.target.value as "%" | "₹",
+                              )
+                            }
                             className="rounded-md border border-border bg-background px-1 py-1 text-sm outline-none shrink-0"
                           >
                             <option value="%">%</option>
@@ -607,7 +650,13 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                           <input
                             type="number"
                             value={item.discountValue}
-                            onChange={(e) => setItemProperty(item.productId, "discountValue", Number(e.target.value) || 0)}
+                            onChange={(e) =>
+                              setItemProperty(
+                                item.productId,
+                                "discountValue",
+                                Number(e.target.value) || 0,
+                              )
+                            }
                             className="w-full rounded-md border border-border bg-background px-2 py-1 text-sm font-semibold num"
                           />
                         </div>
@@ -633,7 +682,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
         </div>
 
         {/* Sale Notes and Summary Grid */}
-         <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Sale Notes Card */}
           <div className="rounded-xl border border-border bg-card p-5 space-y-3">
             <h2 className="text-sm font-bold text-foreground">Sale Notes</h2>
@@ -648,7 +697,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
           {/* Summary Card */}
           <div className="rounded-xl border border-border bg-card p-5 space-y-4">
             <h2 className="text-sm font-bold text-foreground">Summary</h2>
-            
+
             {/* Sale Discount Box */}
             <div className="rounded-md border border-border bg-muted/25 p-3.5 space-y-3 border-dashed">
               <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -753,7 +802,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 <X className="size-4" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               {/* Quick walkin customer option button */}
               <button
@@ -837,15 +886,25 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center pt-1.5 border-t border-border/40">
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total</div>
-                    <div className="text-base font-bold num text-foreground">{fmtMoney(grandTotal)}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Total
+                    </div>
+                    <div className="text-base font-bold num text-foreground">
+                      {fmtMoney(grandTotal)}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Paid</div>
-                    <div className="text-base font-bold num text-emerald-600">{fmtMoney(Number(amountToCollect) || 0)}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Paid
+                    </div>
+                    <div className="text-base font-bold num text-emerald-600">
+                      {fmtMoney(Number(amountToCollect) || 0)}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Balance</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Balance
+                    </div>
                     <div className="text-base font-bold num text-rose-600">
                       {fmtMoney(Math.max(0, grandTotal - (Number(amountToCollect) || 0)))}
                     </div>
@@ -855,17 +914,27 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
               {/* Quick Select Amount */}
               <div className="space-y-1.5">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Quick Select Amount</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Quick Select Amount
+                </span>
                 <div className="grid grid-cols-5 gap-1.5">
                   {(["Full", "Half", "Quarter", "10%", "Custom"] as const).map((opt) => {
                     let active = false;
                     const val = Number(amountToCollect) || 0;
                     if (opt === "Full" && val === grandTotal) active = true;
                     else if (opt === "Half" && val === +(grandTotal / 2).toFixed(2)) active = true;
-                    else if (opt === "Quarter" && val === +(grandTotal / 4).toFixed(2)) active = true;
+                    else if (opt === "Quarter" && val === +(grandTotal / 4).toFixed(2))
+                      active = true;
                     else if (opt === "10%" && val === +(grandTotal / 10).toFixed(2)) active = true;
-                    else if (opt === "Custom" && val !== grandTotal && val !== +(grandTotal / 2).toFixed(2) && val !== +(grandTotal / 4).toFixed(2) && val !== +(grandTotal / 10).toFixed(2)) active = true;
-                    
+                    else if (
+                      opt === "Custom" &&
+                      val !== grandTotal &&
+                      val !== +(grandTotal / 2).toFixed(2) &&
+                      val !== +(grandTotal / 4).toFixed(2) &&
+                      val !== +(grandTotal / 10).toFixed(2)
+                    )
+                      active = true;
+
                     return (
                       <button
                         key={opt}
@@ -873,7 +942,8 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                         onClick={() => {
                           if (opt === "Full") setAmountToCollect(grandTotal.toFixed(2));
                           else if (opt === "Half") setAmountToCollect((grandTotal / 2).toFixed(2));
-                          else if (opt === "Quarter") setAmountToCollect((grandTotal / 4).toFixed(2));
+                          else if (opt === "Quarter")
+                            setAmountToCollect((grandTotal / 4).toFixed(2));
                           else if (opt === "10%") setAmountToCollect((grandTotal / 10).toFixed(2));
                         }}
                         className={`rounded-md py-2 text-center text-xs font-semibold transition cursor-pointer select-none ${
@@ -891,7 +961,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
               {/* Amount to Collect */}
               <div className="space-y-1.5">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Amount to Collect *</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Amount to Collect *
+                </span>
                 <div className="relative rounded-md border border-border bg-background px-3 py-2 flex items-center justify-between">
                   <span className="text-xl font-semibold text-foreground/50">₹</span>
                   <input
@@ -905,7 +977,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
               {/* Payment Method Toggle */}
               <div className="space-y-1.5">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Payment Method *</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Payment Method *
+                </span>
                 <div className="grid grid-cols-2 gap-3">
                   {(["Cash", "Other"] as const).map((method) => (
                     <div
@@ -919,7 +993,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                     >
                       <Coins className="size-5 text-ink" />
                       <span className="text-sm font-semibold text-foreground">{method}</span>
-                      
+
                       {paymentMethod === method && (
                         <div className="absolute top-2 right-2 bg-ink text-paper rounded-full p-0.5">
                           <Check className="size-2.5" />
@@ -968,7 +1042,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               {/* Transaction Reference (Other payment type only) */}
               {paymentMethod === "Other" && (
                 <div className="space-y-1.5">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Transaction Reference</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Transaction Reference
+                  </span>
                   <input
                     placeholder="Enter reference number..."
                     value={transactionReference}
@@ -980,7 +1056,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
               {/* Notes */}
               <div className="space-y-1.5">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Notes (Optional)</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Notes (Optional)
+                </span>
                 <textarea
                   placeholder="Add any notes..."
                   value={notesOptional}
@@ -991,7 +1069,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
               {/* Payment Date */}
               <label className="grid gap-1.5 font-sans">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Payment Date</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Payment Date
+                </span>
                 <input
                   type="datetime-local"
                   value={paymentDate}
@@ -1028,8 +1108,14 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
       )}
 
       {issued && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm no-print" onClick={() => setIssued(null)}>
-          <div className="mx-auto my-8 max-w-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm no-print"
+          onClick={() => setIssued(null)}
+        >
+          <div
+            className="mx-auto my-8 max-w-2xl animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-3 flex justify-between">
               <button
                 type="button"
@@ -1046,7 +1132,10 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 <X className="size-4" />
               </button>
             </div>
-            <InvoiceDocument bill={issued} branch={branches.find((b) => b.id === issued.branchId)} />
+            <InvoiceDocument
+              bill={issued}
+              branch={branches.find((b) => b.id === issued.branchId)}
+            />
           </div>
         </div>
       )}

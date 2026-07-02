@@ -2,8 +2,18 @@ import { useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
 import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { useStore, fmtDate, fmtMoney, type Customer } from "@/lib/store";
-import { Building2, Pencil, Plus, Trash2, UserRound, X, SlidersHorizontal, Check } from "lucide-react";
+import {
+  Building2,
+  Pencil,
+  Plus,
+  Trash2,
+  UserRound,
+  X,
+  SlidersHorizontal,
+  Check,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const countryCodes = ["+91", "+1", "+44", "+971", "+61"];
 
@@ -15,8 +25,11 @@ const parsePhone = (value?: string) => {
 
 export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
   const { session, branches, customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
+  const confirm = useConfirm();
   const isAdmin = mode === "admin";
-  const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const defaultBranchId = isAdmin
+    ? session?.defaultBranchId || branches[0]?.id || ""
+    : session?.branchId || "";
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [query, setQuery] = useState("");
@@ -44,7 +57,8 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
         if (custType !== "All" && customer.type !== custType) return false;
 
         // Compute pending amount: Receivable is money the customer owes us
-        const pendingAmount = customer.balanceType === "Receivable" ? customer.openingBalanceAmount : 0;
+        const pendingAmount =
+          customer.balanceType === "Receivable" ? customer.openingBalanceAmount : 0;
 
         // 2. Payment Status filter
         if (payStatus === "Pending" && pendingAmount <= 0) return false;
@@ -65,7 +79,17 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
         const text = `${customer.name} ${customer.phone} ${customer.email ?? ""}`.toLowerCase();
         return query === "" || text.includes(query.toLowerCase());
       }),
-    [branchFilter, customers, isAdmin, query, session?.branchId, custType, payStatus, amountFrom, amountTo],
+    [
+      branchFilter,
+      customers,
+      isAdmin,
+      query,
+      session?.branchId,
+      custType,
+      payStatus,
+      amountFrom,
+      amountTo,
+    ],
   );
 
   const exportRows = useMemo(
@@ -95,7 +119,15 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
           <>
             <ExportExcelButton
               filename={isAdmin ? "customers" : "branch-customers"}
-              headers={["Name", "Phone", "Email", "Type", "Branch", "Opening balance", "Balance type"]}
+              headers={[
+                "Name",
+                "Phone",
+                "Email",
+                "Type",
+                "Branch",
+                "Opening balance",
+                "Balance type",
+              ]}
               rows={exportRows}
             />
             <button
@@ -143,7 +175,9 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
             ))}
           </select>
         )}
-        <div className="text-xs text-muted-foreground sm:ml-auto">{scopedCustomers.length} customers</div>
+        <div className="text-xs text-muted-foreground sm:ml-auto">
+          {scopedCustomers.length} customers
+        </div>
       </div>
 
       <div className="grid gap-3">
@@ -151,7 +185,10 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
           const branch = branches.find((b) => b.id === customer.branchId);
           const Icon = customer.isBusinessCustomer ? Building2 : UserRound;
           return (
-            <article key={customer.id} className="rounded-xl border border-border bg-card p-5 shadow-soft">
+            <article
+              key={customer.id}
+              className="rounded-xl border border-border bg-card p-5 shadow-soft"
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 gap-3">
                   <div className="grid size-10 shrink-0 place-items-center rounded-md bg-accent">
@@ -196,7 +233,13 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
                     <button
                       type="button"
                       onClick={async () => {
-                        if (!confirm(`Delete ${customer.name}?`)) return;
+                        if (
+                          !(await confirm({
+                            title: "Delete customer?",
+                            description: `Are you sure you want to delete ${customer.name}?`,
+                          }))
+                        )
+                          return;
                         try {
                           await deleteCustomer(customer.id);
                           toast.success("Customer deleted");
@@ -304,7 +347,10 @@ function CustomerFilterModal({
       >
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-xl font-bold text-foreground">Filter Customers</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-accent transition cursor-pointer">
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 hover:bg-accent transition cursor-pointer"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -425,7 +471,9 @@ function CustomerDialog({
   const primaryPhone = parsePhone(initial?.phone);
   const alternatePhone = parsePhone(initial?.secondaryPhone);
   const [branchId, setBranchId] = useState(initial?.branchId ?? defaultBranchId);
-  const [isBusinessCustomer, setIsBusinessCustomer] = useState(initial?.isBusinessCustomer ?? false);
+  const [isBusinessCustomer, setIsBusinessCustomer] = useState(
+    initial?.isBusinessCustomer ?? false,
+  );
   const [name, setName] = useState(initial?.name ?? "");
   const [phoneCode, setPhoneCode] = useState(primaryPhone.code);
   const [phone, setPhone] = useState(primaryPhone.number);
@@ -435,8 +483,12 @@ function CustomerDialog({
   const [address, setAddress] = useState(initial?.address ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [type, setType] = useState<"Business" | "Direct">(initial?.type ?? "Direct");
-  const [openingBalanceAmount, setOpeningBalanceAmount] = useState(String(initial?.openingBalanceAmount ?? "0.00"));
-  const [balanceType, setBalanceType] = useState<"Receivable" | "Payable">(initial?.balanceType ?? "Receivable");
+  const [openingBalanceAmount, setOpeningBalanceAmount] = useState(
+    String(initial?.openingBalanceAmount ?? "0.00"),
+  );
+  const [balanceType, setBalanceType] = useState<"Receivable" | "Payable">(
+    initial?.balanceType ?? "Receivable",
+  );
   const [balanceDate, setBalanceDate] = useState(initial?.balanceDate ?? "");
 
   const submit = (e: FormEvent) => {
@@ -462,8 +514,14 @@ function CustomerDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="mx-auto my-6 w-full max-w-3xl rounded-xl border border-border bg-card p-6 shadow-paper" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-ink/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="mx-auto my-6 w-full max-w-3xl rounded-xl border border-border bg-card p-6 shadow-paper"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="mb-5 flex items-start justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -471,7 +529,12 @@ function CustomerDialog({
             </div>
             <h2 className="font-display text-2xl">{initial ? "Edit customer" : "Add customer"}</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1.5 hover:bg-accent" aria-label="Close">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1.5 hover:bg-accent"
+            aria-label="Close"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -479,8 +542,15 @@ function CustomerDialog({
         <form className="grid gap-4" onSubmit={submit}>
           {isAdmin && (
             <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Branch *</span>
-              <select required value={branchId} onChange={(e) => setBranchId(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                Branch *
+              </span>
+              <select
+                required
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+              >
                 <option value="">Select branch</option>
                 {branches.map((branch) => (
                   <option key={branch.id} value={branch.id}>
@@ -507,18 +577,48 @@ function CustomerDialog({
             <Field label="Name *" value={name} onChange={setName} required />
             <label className="grid gap-1.5">
               <span className="text-xs uppercase tracking-wider text-muted-foreground">Type *</span>
-              <select required value={type} onChange={(e) => setType(e.target.value as "Business" | "Direct")} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink">
+              <select
+                required
+                value={type}
+                onChange={(e) => setType(e.target.value as "Business" | "Direct")}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+              >
                 <option>Business</option>
                 <option>Direct</option>
               </select>
             </label>
-            <PhoneField label="Phone *" code={phoneCode} value={phone} onCode={setPhoneCode} onChange={setPhone} required />
-            <PhoneField label="Secondary phone" code={secondaryCode} value={secondaryPhone} onCode={setSecondaryCode} onChange={setSecondaryPhone} />
+            <PhoneField
+              label="Phone *"
+              code={phoneCode}
+              value={phone}
+              onCode={setPhoneCode}
+              onChange={setPhone}
+              required
+            />
+            <PhoneField
+              label="Secondary phone"
+              code={secondaryCode}
+              value={secondaryPhone}
+              onCode={setSecondaryCode}
+              onChange={setSecondaryPhone}
+            />
             <Field label="Email" type="email" value={email} onChange={setEmail} />
-            <Field label="Opening balance" type="number" step="0.01" value={openingBalanceAmount} onChange={setOpeningBalanceAmount} />
+            <Field
+              label="Opening balance"
+              type="number"
+              step="0.01"
+              value={openingBalanceAmount}
+              onChange={setOpeningBalanceAmount}
+            />
             <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Balance type</span>
-              <select value={balanceType} onChange={(e) => setBalanceType(e.target.value as "Receivable" | "Payable")} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                Balance type
+              </span>
+              <select
+                value={balanceType}
+                onChange={(e) => setBalanceType(e.target.value as "Receivable" | "Payable")}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+              >
                 <option value="Receivable">Receivable (Customer owes us)</option>
                 <option value="Payable">Payable (We owe customer)</option>
               </select>
@@ -529,7 +629,10 @@ function CustomerDialog({
           <TextArea label="Address" value={address} onChange={setAddress} />
           <TextArea label="Notes" value={notes} onChange={setNotes} />
 
-          <button type="submit" className="rounded-md bg-ink py-2.5 text-sm text-paper hover:opacity-90">
+          <button
+            type="submit"
+            className="rounded-md bg-ink py-2.5 text-sm text-paper hover:opacity-90"
+          >
             {initial ? "Save changes" : "Save customer"}
           </button>
         </form>
@@ -587,7 +690,11 @@ function PhoneField({
     <label className="grid gap-1.5">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       <div className="grid grid-cols-[5.5rem_1fr] gap-2">
-        <select value={code} onChange={(e) => onCode(e.target.value)} className="rounded-md border border-border bg-background px-2 py-2 text-sm outline-none focus:border-ink">
+        <select
+          value={code}
+          onChange={(e) => onCode(e.target.value)}
+          className="rounded-md border border-border bg-background px-2 py-2 text-sm outline-none focus:border-ink"
+        >
           {countryCodes.map((countryCode) => (
             <option key={countryCode}>{countryCode}</option>
           ))}
@@ -604,11 +711,23 @@ function PhoneField({
   );
 }
 
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function TextArea({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <label className="grid gap-1.5">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink" />
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+      />
     </label>
   );
 }

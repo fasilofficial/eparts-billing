@@ -1,15 +1,37 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { PageHeader, Stat } from "@/components/DashboardLayout";
 import { useStore, fmtMoney, type PaymentAccount } from "@/lib/store";
-import { Banknote, CreditCard, Landmark, Pencil, Plus, Trash2, Wallet, X, Coins, ShieldAlert } from "lucide-react";
+import {
+  Banknote,
+  CreditCard,
+  Landmark,
+  Pencil,
+  Plus,
+  Trash2,
+  Wallet,
+  X,
+  Coins,
+  ShieldAlert,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const accountTypes = ["Bank Account", "Cash", "Card", "UPI", "Cheque", "Other"] as const;
 
 export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, paymentAccounts, addPaymentAccount, updatePaymentAccount, deletePaymentAccount } = useStore();
+  const {
+    session,
+    branches,
+    paymentAccounts,
+    addPaymentAccount,
+    updatePaymentAccount,
+    deletePaymentAccount,
+  } = useStore();
+  const confirm = useConfirm();
   const isAdmin = mode === "admin";
-  const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const defaultBranchId = isAdmin
+    ? session?.defaultBranchId || branches[0]?.id || ""
+    : session?.branchId || "";
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
   const [statusFilter, setStatusFilter] = useState("All");
@@ -19,9 +41,15 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
   const scoped = useMemo(
     () =>
       paymentAccounts.filter((a) => {
-        const matchesBranch = !isAdmin ? a.branchId === session?.branchId : branchFilter === "all" || a.branchId === branchFilter;
-        const matchesStatus = statusFilter === "All" || (statusFilter === "Active" ? a.status === "Active" : a.status === "Inactive");
-        const matchesQuery = `${a.accountName} ${a.accountNumber ?? ""}`.toLowerCase().includes(query.toLowerCase());
+        const matchesBranch = !isAdmin
+          ? a.branchId === session?.branchId
+          : branchFilter === "all" || a.branchId === branchFilter;
+        const matchesStatus =
+          statusFilter === "All" ||
+          (statusFilter === "Active" ? a.status === "Active" : a.status === "Inactive");
+        const matchesQuery = `${a.accountName} ${a.accountNumber ?? ""}`
+          .toLowerCase()
+          .includes(query.toLowerCase());
         return matchesBranch && matchesStatus && matchesQuery;
       }),
     [branchFilter, isAdmin, paymentAccounts, query, session?.branchId, statusFilter],
@@ -108,7 +136,9 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
             <ShieldAlert className="size-6 text-muted-foreground" />
           </div>
           <h2 className="mt-4 text-base font-semibold">No accounts found</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Get started by adding a payment method or ledger.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Get started by adding a payment method or ledger.
+          </p>
           <button
             onClick={() => setOpen(true)}
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft"
@@ -138,7 +168,9 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
                       {a.accountNumber && (
                         <>
                           <span>·</span>
-                          <span className="num font-medium text-foreground/70">{a.accountNumber}</span>
+                          <span className="num font-medium text-foreground/70">
+                            {a.accountNumber}
+                          </span>
                         </>
                       )}
                     </div>
@@ -180,7 +212,13 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
                     </button>
                     <button
                       onClick={async () => {
-                        if (!confirm(`Delete ${a.accountName}?`)) return;
+                        if (
+                          !(await confirm({
+                            title: "Delete payment account?",
+                            description: `Are you sure you want to delete ${a.accountName}?`,
+                          }))
+                        )
+                          return;
                         try {
                           await deletePaymentAccount(a.id);
                           toast.success("Account deleted");
@@ -246,7 +284,9 @@ function AccountDialog({
 }) {
   const [branchId, setBranchId] = useState(initial?.branchId ?? defaultBranchId);
   const [accountName, setAccountName] = useState(initial?.accountName ?? "");
-  const [accountType, setAccountType] = useState<PaymentAccount["accountType"]>(initial?.accountType ?? "Bank Account");
+  const [accountType, setAccountType] = useState<PaymentAccount["accountType"]>(
+    initial?.accountType ?? "Bank Account",
+  );
   const [status, setStatus] = useState<"Active" | "Inactive">(initial?.status ?? "Active");
   const [accountNumber, setAccountNumber] = useState(initial?.accountNumber ?? "");
   const [openingBalance, setOpeningBalance] = useState(String(initial?.openingBalance ?? 0));
@@ -314,7 +354,9 @@ function AccountDialog({
               />
             </div>
             <div>
-              <span className="text-xs uppercase tracking-wider text-muted-foreground block mb-2">Status *</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground block mb-2">
+                Status *
+              </span>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer text-sm select-none">
                   <input
@@ -368,7 +410,12 @@ function AccountDialog({
             <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground border-b border-border/60 pb-1.5">
               Additional Information
             </h3>
-            <TextArea label="Description" value={description} onChange={setDescription} placeholder="Enter account details or usage context..." />
+            <TextArea
+              label="Description"
+              value={description}
+              onChange={setDescription}
+              placeholder="Enter account details or usage context..."
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

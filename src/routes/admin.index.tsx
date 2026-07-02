@@ -152,7 +152,10 @@ function AdminOverview() {
           )}
 
           {branchRevenueData.length > 0 ? (
-            <ChartContainer config={revenueChartConfig} className="mx-auto mt-6 aspect-square max-h-[320px]">
+            <ChartContainer
+              config={revenueChartConfig}
+              className="mx-auto mt-6 aspect-square max-h-[320px]"
+            >
               <PieChart>
                 <ChartTooltip
                   content={
@@ -170,10 +173,7 @@ function AdminOverview() {
                   strokeWidth={2}
                 >
                   {branchRevenueData.map((entry, index) => (
-                    <Cell
-                      key={entry.fillKey}
-                      fill={CHART_COLORS[index % CHART_COLORS.length]}
-                    />
+                    <Cell key={entry.fillKey} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
               </PieChart>
@@ -213,7 +213,10 @@ function AdminOverview() {
           <p className="mt-1 text-xs text-muted-foreground">
             Current quantity on hand for each product.
           </p>
-          <ChartContainer config={stockChartConfig} className="mt-6 aspect-[4/3] max-h-[360px] w-full">
+          <ChartContainer
+            config={stockChartConfig}
+            className="mt-6 aspect-[4/3] max-h-[360px] w-full"
+          >
             <BarChart data={stockChartData} margin={{ left: 0, right: 8, bottom: 48 }}>
               <XAxis
                 dataKey="name"

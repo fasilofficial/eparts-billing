@@ -3,20 +3,33 @@ import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, fmtMoney, type ReturnRecord } from "@/lib/store";
 import { RotateCcw, SlidersHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 const statusColors: Record<string, string> = {
   Open: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900/50",
-  Approved: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
-  Refunded: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50",
-  Rejected: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50",
+  Approved:
+    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
+  Refunded:
+    "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50",
+  Rejected:
+    "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50",
 };
 
-export function ReturnsPage({ mode, type }: { mode: "admin" | "branch"; type: "Sale" | "Purchase" }) {
+export function ReturnsPage({
+  mode,
+  type,
+}: {
+  mode: "admin" | "branch";
+  type: "Sale" | "Purchase";
+}) {
   const { session, branches, returns, addReturn, updateReturn, deleteReturn } = useStore();
+  const confirm = useConfirm();
   const isAdmin = mode === "admin";
-  const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const defaultBranchId = isAdmin
+    ? session?.defaultBranchId || branches[0]?.id || ""
+    : session?.branchId || "";
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
   const [status, setStatus] = useState("All Status");
@@ -112,7 +125,9 @@ export function ReturnsPage({ mode, type }: { mode: "admin" | "branch"; type: "S
           </div>
           <h2 className="mt-4 text-base font-semibold">No returns found</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {type === "Sale" ? "Customer returns will appear here" : "Supplier returns will appear here"}
+            {type === "Sale"
+              ? "Customer returns will appear here"
+              : "Supplier returns will appear here"}
           </p>
         </div>
       ) : (
@@ -136,7 +151,9 @@ export function ReturnsPage({ mode, type }: { mode: "admin" | "branch"; type: "S
                   <td className="px-5 py-3.5 text-muted-foreground num">{r.date}</td>
                   <td className="px-5 py-3.5 text-right font-semibold num">{fmtMoney(r.amount)}</td>
                   <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${statusColors[r.status] || "bg-muted text-muted-foreground border-border"}`}>
+                    <span
+                      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${statusColors[r.status] || "bg-muted text-muted-foreground border-border"}`}
+                    >
                       {r.status}
                     </span>
                   </td>
@@ -154,7 +171,13 @@ export function ReturnsPage({ mode, type }: { mode: "admin" | "branch"; type: "S
                       </button>
                       <button
                         onClick={async () => {
-                          if (!confirm(`Delete ${r.number}?`)) return;
+                          if (
+                            !(await confirm({
+                              title: "Delete return record?",
+                              description: `Are you sure you want to delete return record ${r.number}?`,
+                            }))
+                          )
+                            return;
                           try {
                             await deleteReturn(r.id);
                             toast.success("Return deleted");
@@ -444,4 +467,3 @@ function Select({
     </label>
   );
 }
-

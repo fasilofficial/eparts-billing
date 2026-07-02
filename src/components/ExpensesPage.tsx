@@ -1,8 +1,10 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, fmtMoney, type Expense } from "@/lib/store";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { ImageLightbox } from "./ImageLightbox";
+import { supabase } from "@/lib/supabase";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const categories = ["Rent", "Utilities", "Salary", "Travel", "Office Supplies", "Repairs", "Marketing"];
@@ -15,6 +17,11 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Expense | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    photos: string[];
+    currentIndex: number;
+  }>({ isOpen: false, photos: [], currentIndex: 0 });
 
   const scoped = useMemo(
     () =>
@@ -67,7 +74,49 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
           <tbody>
             {scoped.map((expense) => (
               <tr key={expense.id} className="group border-b border-border/60 transition hover:bg-muted/50">
-                <td className="px-5 py-3 font-medium">{expense.description}<div className="text-xs text-muted-foreground">{expense.expenseNumber}</div></td>
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    {expense.receipt && expense.receipt.startsWith("http") ? (
+                      expense.receipt.toLowerCase().includes(".pdf") ? (
+                        <a
+                          href={expense.receipt}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="size-10 flex-shrink-0 rounded-md border border-border flex items-center justify-center bg-muted text-muted-foreground hover:bg-accent transition"
+                          title="View PDF receipt in new tab"
+                        >
+                          <FileText className="size-5 text-red-500" />
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLightbox({
+                              isOpen: true,
+                              photos: [expense.receipt!],
+                              currentIndex: 0,
+                            });
+                          }}
+                          className="size-10 flex-shrink-0 rounded-md border border-border overflow-hidden bg-muted hover:opacity-80 transition"
+                          title="Click to preview receipt"
+                        >
+                          <img src={expense.receipt} alt="" className="size-full object-cover" />
+                        </button>
+                      )
+                    ) : expense.receipt ? (
+                      <div
+                        className="size-10 flex-shrink-0 rounded-md border border-border flex items-center justify-center bg-muted text-muted-foreground text-[10px] p-0.5 text-center break-all overflow-hidden"
+                        title={expense.receipt}
+                      >
+                        📄 {expense.receipt.slice(0, 10)}
+                      </div>
+                    ) : null}
+                    <div>
+                      <div className="font-medium">{expense.description}</div>
+                      <div className="text-xs text-muted-foreground">{expense.expenseNumber}</div>
+                    </div>
+                  </div>
+                </td>
                 <td className="px-5 py-3 text-muted-foreground">{expense.category}</td>
                 <td className="px-5 py-3 num">{expense.date}</td>
                 <td className="px-5 py-3 text-right num">{fmtMoney(expense.total)}</td>
@@ -103,6 +152,14 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
           }}
         />
       )}
+
+      <ImageLightbox
+        isOpen={lightbox.isOpen}
+        photos={lightbox.photos}
+        currentIndex={lightbox.currentIndex}
+        onClose={() => setLightbox((prev) => ({ ...prev, isOpen: false }))}
+        onChangeIndex={(idx) => setLightbox((prev) => ({ ...prev, currentIndex: idx }))}
+      />
     </>
   );
 }
@@ -120,6 +177,8 @@ function ExpenseDialog({ isAdmin, branches, suppliers, customers, defaultBranchI
   const [relatedDocumentType, setRelatedDocumentType] = useState(initial?.relatedDocumentType ?? "None");
   const [isRecurring, setIsRecurring] = useState(initial?.isRecurring ?? false);
   const [receipt, setReceipt] = useState(initial?.receipt ?? "");
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [status, setStatus] = useState<"Paid" | "Unpaid">(initial?.status ?? "Paid");
   const subtotal = Number(amount) || 0;
@@ -127,9 +186,42 @@ function ExpenseDialog({ isAdmin, branches, suppliers, customers, defaultBranchI
   const branchSuppliers = suppliers.filter((s) => s.branchId === branchId);
   const branchCustomers = customers.filter((c) => c.branchId === branchId);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    onSave({ branchId, expenseNumber: expenseNumber || `EXP-${1000 + count + 1}`, date, category, description, amount: subtotal, taxRate: Number(taxRate) || 0, subtotal, total, supplierId: supplierId || undefined, customerId: customerId || undefined, relatedDocumentType, isRecurring, receipt: receipt || undefined, notes: notes || undefined, status });
+    let receiptUrl = receipt;
+
+    if (newFile) {
+      setUploading(true);
+      const toastId = toast.loading("Uploading receipt...");
+      try {
+        const fileExt = newFile.name.split('.').pop();
+        const uniqueId = Math.random().toString(36).substring(2, 9);
+        const fileName = `${uniqueId}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error } = await supabase.storage
+          .from("repairs")
+          .upload(filePath, newFile, { cacheControl: '3600', upsert: false });
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+          .from("repairs")
+          .getPublicUrl(filePath);
+
+        receiptUrl = urlData.publicUrl;
+        toast.dismiss(toastId);
+      } catch (err: any) {
+        toast.dismiss(toastId);
+        toast.error(`Receipt upload failed: ${err.message}`);
+        setUploading(false);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    onSave({ branchId, expenseNumber: expenseNumber || `EXP-${1000 + count + 1}`, date, category, description, amount: subtotal, taxRate: Number(taxRate) || 0, subtotal, total, supplierId: supplierId || undefined, customerId: customerId || undefined, relatedDocumentType, isRecurring, receipt: receiptUrl || undefined, notes: notes || undefined, status });
   };
 
   return (
@@ -143,9 +235,56 @@ function ExpenseDialog({ isAdmin, branches, suppliers, customers, defaultBranchI
           <div className="grid gap-4 sm:grid-cols-4"><Field label="Amount *" type="number" step="0.01" value={amount} onChange={setAmount} required /><Field label="Tax rate %" type="number" step="0.01" value={taxRate} onChange={setTaxRate} /><ReadOnly label="Subtotal" value={fmtMoney(subtotal)} /><ReadOnly label="Total" value={fmtMoney(total)} /></div>
           <div className="grid gap-4 sm:grid-cols-4"><SelectField label="Supplier" value={supplierId} onChange={setSupplierId} options={["No Supplier", ...branchSuppliers.map((s) => s.companyName)]} values={["", ...branchSuppliers.map((s) => s.id)]} /><SelectField label="Customer" value={customerId} onChange={setCustomerId} options={["No Customer", ...branchCustomers.map((c) => c.name)]} values={["", ...branchCustomers.map((c) => c.id)]} /><SelectField label="Related document" value={relatedDocumentType} onChange={setRelatedDocumentType} options={["None", "Purchase", "Repair", "Sale"]} /><SelectField label="Status" value={status} onChange={(v) => setStatus(v as "Paid" | "Unpaid")} options={["Paid", "Unpaid"]} /></div>
           <label className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm"><input type="checkbox" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} /> This is a recurring expense</label>
-          <label className="grid gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">Receipt upload</span><input type="file" accept="image/jpeg,image/png,application/pdf" onChange={(e) => setReceipt(e.target.files?.[0]?.name ?? "")} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />{receipt && <span className="text-xs text-muted-foreground">{receipt}</span>}</label>
+          <div className="grid gap-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Receipt upload</span>
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  if (file) {
+                    setNewFile(file);
+                    setReceipt(file.name);
+                  }
+                }}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+              />
+              {(receipt || newFile) && (
+                <div className="relative group size-10 flex-shrink-0 rounded-md border border-border overflow-hidden bg-muted">
+                  {newFile ? (
+                    newFile.type === "application/pdf" ? (
+                      <div className="size-full flex items-center justify-center bg-muted text-muted-foreground text-[10px] font-bold">PDF</div>
+                    ) : (
+                      <img src={URL.createObjectURL(newFile)} alt="" className="size-full object-cover" />
+                    )
+                  ) : receipt.toLowerCase().includes(".pdf") ? (
+                    <div className="size-full flex items-center justify-center bg-muted text-muted-foreground text-[10px] font-bold">PDF</div>
+                  ) : (
+                    <img src={receipt} alt="" className="size-full object-cover" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReceipt("");
+                      setNewFile(null);
+                    }}
+                    className="absolute inset-0 flex items-center justify-center bg-ink/50 text-paper opacity-0 group-hover:opacity-100 transition"
+                    title="Remove receipt"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
           <TextArea label="Notes" value={notes} onChange={setNotes} />
-          <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Cancel</button><button type="submit" className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90">{initial ? "Save changes" : "Create Expense"}</button></div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Cancel</button>
+            <button type="submit" disabled={uploading} className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-50">
+              {uploading ? "Uploading..." : (initial ? "Save changes" : "Create Expense")}
+            </button>
+          </div>
         </form>
       </div>
     </div>

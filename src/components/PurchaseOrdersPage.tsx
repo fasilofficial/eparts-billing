@@ -1,8 +1,10 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, fmtMoney, type PurchaseCharge, type PurchaseItem, type PurchaseOrder } from "@/lib/store";
-import { Pencil, Plus, ScanLine, Trash2, X } from "lucide-react";
+import { Pencil, Plus, ScanLine, Trash2, X, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { ImageLightbox } from "./ImageLightbox";
+import { supabase } from "@/lib/supabase";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const emptyItem = (): PurchaseItem => ({ productName: "", quantity: 1, unitPrice: 0, tax: 0, discountPercent: 0, total: 0 });
@@ -15,6 +17,11 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<PurchaseOrder | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    photos: string[];
+    currentIndex: number;
+  }>({ isOpen: false, photos: [], currentIndex: 0 });
 
   const scoped = useMemo(
     () =>
@@ -50,7 +57,58 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
           <tbody>
             {scoped.map((po) => (
               <tr key={po.id} className="group border-b border-border/60 transition hover:bg-muted/50">
-                <td className="px-5 py-3 font-medium">{po.number}<div className="text-xs text-muted-foreground">{po.items.length} items</div></td>
+                <td className="px-5 py-3">
+                  <div className="font-medium">{po.number}</div>
+                  <div className="text-xs text-muted-foreground">{po.items.length} items</div>
+                  {po.attachments && po.attachments.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {po.attachments.map((att, aIdx) => {
+                        const isUrl = att.startsWith("http");
+                        const isPdf = att.toLowerCase().includes(".pdf");
+                        return isUrl ? (
+                          isPdf ? (
+                            <a
+                              key={aIdx}
+                              href={att}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex size-6 items-center justify-center rounded border border-border bg-muted text-red-500 hover:bg-accent transition"
+                              title="View PDF attachment"
+                            >
+                              <FileText className="size-3.5" />
+                            </a>
+                          ) : (
+                            <button
+                              key={aIdx}
+                              type="button"
+                              onClick={() => {
+                                const urls = po.attachments.filter((p) => p.startsWith("http") && !p.toLowerCase().includes(".pdf"));
+                                const idx = urls.indexOf(att);
+                                setLightbox({
+                                  isOpen: true,
+                                  photos: urls,
+                                  currentIndex: idx >= 0 ? idx : 0,
+                                });
+                              }}
+                              className="size-6 rounded border border-border overflow-hidden bg-muted hover:opacity-80 transition"
+                              title="Click to preview image"
+                            >
+                              <img src={att} alt="" className="size-full object-cover" />
+                            </button>
+                          )
+                        ) : (
+                          <span
+                            key={aIdx}
+                            className="inline-flex h-6 items-center gap-0.5 rounded border border-border bg-muted px-1.5 text-[8px] font-mono text-muted-foreground"
+                            title={att}
+                          >
+                            📄 {att.slice(0, 8)}...
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </td>
                 <td className="px-5 py-3">{po.supplierName}</td>
                 <td className="px-5 py-3 num">{po.purchaseDate}</td>
                 <td className="px-5 py-3">{po.status}</td>
@@ -85,6 +143,14 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
           }}
         />
       )}
+
+      <ImageLightbox
+        isOpen={lightbox.isOpen}
+        photos={lightbox.photos}
+        currentIndex={lightbox.currentIndex}
+        onClose={() => setLightbox((prev) => ({ ...prev, isOpen: false }))}
+        onChangeIndex={(idx) => setLightbox((prev) => ({ ...prev, currentIndex: idx }))}
+      />
     </>
   );
 }
@@ -97,6 +163,8 @@ function PurchaseDialog({ isAdmin, branches, suppliers, products, defaultBranchI
   const [expectedDelivery, setExpectedDelivery] = useState(initial?.expectedDelivery ?? "");
   const [items, setItems] = useState<PurchaseItem[]>(initial?.items.length ? initial.items : [emptyItem()]);
   const [attachments, setAttachments] = useState<string[]>(initial?.attachments ?? []);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [shippingCharge, setShippingCharge] = useState(String(initial?.shippingCharge ?? 0));
   const [shippingDetails, setShippingDetails] = useState(initial?.shippingDetails ?? "");
   const [charges, setCharges] = useState<PurchaseCharge[]>(initial?.additionalCharges ?? []);
@@ -115,13 +183,57 @@ function PurchaseDialog({ isAdmin, branches, suppliers, products, defaultBranchI
     }));
   };
 
-  const submit = (status: "Draft" | "Created") => {
+  const submit = async (status: "Draft" | "Created") => {
     const supplier = branchSuppliers.find((s) => s.id === supplierId);
     const supplierName = supplier?.companyName || supplierInput.trim();
     if (!supplierName) { toast.error("Supplier is required"); return; }
     const cleanItems = items.filter((item) => item.productName.trim());
     if (cleanItems.length === 0) { toast.error("Add at least one item"); return; }
-    onSave({ branchId, supplierId: supplier?.id, supplierName, purchaseDate, expectedDelivery: expectedDelivery || undefined, attachments, shippingCharge: Number(shippingCharge) || 0, shippingDetails: shippingDetails || undefined, additionalCharges: charges.filter((c) => c.label || c.amount), notes: notes || undefined, subtotal, grandTotal, status, items: cleanItems });
+
+    let finalAttachments = [...attachments];
+
+    if (newFiles.length > 0) {
+      setUploading(true);
+      const toastId = toast.loading("Uploading attachments...");
+      try {
+        const uploadPromises = newFiles.map(async (file) => {
+          const fileExt = file.name.split('.').pop();
+          const uniqueId = Math.random().toString(36).substring(2, 9);
+          const fileName = `${uniqueId}-${Date.now()}.${fileExt}`;
+          const filePath = `${fileName}`;
+
+          const { error } = await supabase.storage
+            .from("repairs")
+            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+          if (error) throw error;
+
+          const { data: urlData } = supabase.storage
+            .from("repairs")
+            .getPublicUrl(filePath);
+
+          return { originalName: file.name, publicUrl: urlData.publicUrl };
+        });
+
+        const uploadedFiles = await Promise.all(uploadPromises);
+
+        finalAttachments = finalAttachments.map((att) => {
+          const uploaded = uploadedFiles.find((u) => u.originalName === att);
+          return uploaded ? uploaded.publicUrl : att;
+        });
+
+        toast.dismiss(toastId);
+      } catch (err: any) {
+        toast.dismiss(toastId);
+        toast.error(`Attachment upload failed: ${err.message}`);
+        setUploading(false);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    onSave({ branchId, supplierId: supplier?.id, supplierName, purchaseDate, expectedDelivery: expectedDelivery || undefined, attachments: finalAttachments, shippingCharge: Number(shippingCharge) || 0, shippingDetails: shippingDetails || undefined, additionalCharges: charges.filter((c) => c.label || c.amount), notes: notes || undefined, subtotal, grandTotal, status, items: cleanItems });
   };
 
   return (
@@ -151,12 +263,124 @@ function PurchaseDialog({ isAdmin, branches, suppliers, products, defaultBranchI
             </table>
           </div>
           <button type="button" onClick={() => setItems((prev) => [...prev, emptyItem()])} className="inline-flex w-fit items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"><Plus className="size-4" /> Add item</button>
-          <label className="grid gap-1.5"><span className="text-xs uppercase tracking-wider text-muted-foreground">Attachments</span><input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => setAttachments(Array.from(e.target.files || []).map((file) => file.name))} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />{attachments.length > 0 && <span className="text-xs text-muted-foreground">{attachments.length} files selected</span>}</label>
+          <div className="grid gap-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Attachments</span>
+              <input
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []).slice(0, 10);
+                  const existingAttachments = attachments || [];
+                  const newNames = files.map((file) => file.name);
+                  setAttachments([...existingAttachments, ...newNames]);
+                  setNewFiles([...newFiles, ...files]);
+                }}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </label>
+
+            {((attachments && attachments.length > 0) || (newFiles && newFiles.length > 0)) && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {attachments && attachments
+                  .filter((att) => !newFiles.some((f) => f.name === att))
+                  .map((att, idx) => {
+                    const isUrl = att.startsWith("http");
+                    const isPdf = att.toLowerCase().includes(".pdf");
+                    return (
+                      <div key={`existing-${idx}`} className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted">
+                        {isUrl ? (
+                          isPdf ? (
+                            <a href={att} target="_blank" rel="noreferrer" className="size-full flex flex-col items-center justify-center p-1 text-[10px] text-center text-muted-foreground hover:bg-accent transition" title="View PDF">
+                              <FileText className="size-6 text-red-500" />
+                              <span className="truncate w-full text-[8px]">PDF</span>
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const urls = attachments.filter((p) => p.startsWith("http") && !p.toLowerCase().includes(".pdf"));
+                                const activeIndex = urls.indexOf(att);
+                                setLightbox({
+                                  isOpen: true,
+                                  photos: urls,
+                                  currentIndex: activeIndex >= 0 ? activeIndex : 0,
+                                });
+                              }}
+                              className="size-full object-cover"
+                              title="Click to preview image"
+                            >
+                              <img src={att} alt="" className="size-full object-cover" />
+                            </button>
+                          )
+                        ) : (
+                          <div className="size-full flex flex-col items-center justify-center p-1 text-[8px] text-center text-muted-foreground break-all" title={att}>
+                            <span>📄</span>
+                            <span className="truncate w-full">{att}</span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = attachments.filter((_, i) => i !== idx);
+                            setAttachments(updated);
+                          }}
+                          className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
+                          title="Remove attachment"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                {newFiles.map((file, idx) => {
+                  const isPdf = file.type === "application/pdf";
+                  const localUrl = isPdf ? "" : URL.createObjectURL(file);
+                  return (
+                    <div key={`new-${idx}`} className="relative group size-16 rounded-md border border-border overflow-hidden bg-muted">
+                      {isPdf ? (
+                        <div className="size-full flex flex-col items-center justify-center p-1 text-[10px] text-center text-muted-foreground">
+                          <FileText className="size-6 text-red-500" />
+                          <span className="truncate w-full text-[8px]">{file.name}</span>
+                        </div>
+                      ) : (
+                        <img src={localUrl} alt="" className="size-full object-cover" />
+                      )}
+                      <span className="absolute bottom-0 inset-x-0 bg-ink/60 text-[8px] text-paper text-center truncate py-0.5">New</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedNew = newFiles.filter((_, i) => i !== idx);
+                          const updatedAtt = attachments.filter((p) => p !== file.name);
+                          setNewFiles(updatedNew);
+                          setAttachments(updatedAtt);
+                        }}
+                        className="absolute top-0.5 right-0.5 rounded-full bg-ink/75 text-paper p-0.5 opacity-0 group-hover:opacity-100 transition"
+                        title="Remove attachment"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2"><Field label="Shipping charge" type="number" step="0.01" value={shippingCharge} onChange={setShippingCharge} /><Field label="Shipping details" value={shippingDetails} onChange={setShippingDetails} /></div>
           <div className="grid gap-2">{charges.map((charge, index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_10rem_auto]"><Field label="Charge label" value={charge.label} onChange={(value) => setCharges((prev) => prev.map((c, i) => i === index ? { ...c, label: value } : c))} /><Field label="Amount" type="number" step="0.01" value={String(charge.amount)} onChange={(value) => setCharges((prev) => prev.map((c, i) => i === index ? { ...c, amount: Number(value) || 0 } : c))} /><button type="button" onClick={() => setCharges((prev) => prev.filter((_, i) => i !== index))} className="self-end rounded-md p-2 text-destructive hover:bg-accent"><Trash2 className="size-4" /></button></div>)}<button type="button" onClick={() => setCharges((prev) => [...prev, { label: "", amount: 0 }])} className="w-fit rounded-md border border-border px-3 py-2 text-sm hover:bg-accent">+ Add Charge</button></div>
           <TextArea label="Notes" value={notes} onChange={setNotes} />
           <div className="ml-auto w-full max-w-sm rounded-xl border border-border bg-background p-4 text-sm"><Row label="Subtotal" value={fmtMoney(subtotal)} /><Row label="Shipping" value={fmtMoney(Number(shippingCharge) || 0)} /><Row label="Additional charges" value={fmtMoney(chargesTotal)} /><div className="mt-3 flex justify-between border-t border-border pt-3 font-semibold"><span>Grand Total</span><span className="num">{fmtMoney(grandTotal)}</span></div></div>
-          <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Cancel</button><button type="button" onClick={() => submit("Draft")} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Save as Draft</button><button type="button" onClick={() => submit("Created")} className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90">Create Purchase</button></div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Cancel</button>
+            <button type="button" disabled={uploading} onClick={() => submit("Draft")} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent disabled:opacity-50">
+              {uploading ? "Uploading..." : "Save as Draft"}
+            </button>
+            <button type="button" disabled={uploading} onClick={() => submit("Created")} className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-50">
+              {uploading ? "Uploading..." : (initial ? "Save changes" : "Create Purchase")}
+            </button>
+          </div>
         </form>
       </div>
     </div>

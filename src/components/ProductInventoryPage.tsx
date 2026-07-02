@@ -4,6 +4,8 @@ import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { useStore, fmtMoney, type Product } from "@/lib/store";
 import { Package, Pencil, Plus, ScanLine, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { ImageLightbox } from "./ImageLightbox";
+import { supabase } from "@/lib/supabase";
 
 const units = ["Pieces", "Hours", "Days", "Kg", "Meter", "Box"];
 const taxes = ["No Tax", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
@@ -16,6 +18,11 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Product | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    photos: string[];
+    currentIndex: number;
+  }>({ isOpen: false, photos: [], currentIndex: 0 });
 
   const scoped = useMemo(
     () =>
@@ -121,8 +128,32 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
               return (
                 <tr key={product.id} className="group border-b border-border/60 transition hover:bg-muted/50">
                   <td className="px-5 py-3">
-                    <div className="font-medium">{product.name}</div>
-                    <div className="text-xs text-muted-foreground">{product.category || "Uncategorized"} {product.brand ? `· ${product.brand}` : ""}</div>
+                    <div className="flex items-center gap-3">
+                      {product.image && product.image.startsWith("http") ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLightbox({
+                              isOpen: true,
+                              photos: [product.image!],
+                              currentIndex: 0,
+                            });
+                          }}
+                          className="size-10 flex-shrink-0 rounded-md border border-border overflow-hidden bg-muted hover:opacity-80 transition"
+                          title="Click to preview image"
+                        >
+                          <img src={product.image} alt="" className="size-full object-cover" />
+                        </button>
+                      ) : (
+                        <div className="size-10 flex-shrink-0 rounded-md border border-border flex items-center justify-center bg-muted text-muted-foreground">
+                          <Package className="size-5" />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-xs text-muted-foreground">{product.category || "Uncategorized"} {product.brand ? `· ${product.brand}` : ""}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground num">{product.sku}</td>
                   {isAdmin && <td className="px-5 py-3 text-muted-foreground">{branch?.name ?? "-"}</td>}
@@ -193,6 +224,14 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
           }}
         />
       )}
+
+      <ImageLightbox
+        isOpen={lightbox.isOpen}
+        photos={lightbox.photos}
+        currentIndex={lightbox.currentIndex}
+        onClose={() => setLightbox((prev) => ({ ...prev, isOpen: false }))}
+        onChangeIndex={(idx) => setLightbox((prev) => ({ ...prev, currentIndex: idx }))}
+      />
     </>
   );
 }
@@ -217,6 +256,8 @@ function ProductDialog({
   const [branchId, setBranchId] = useState(initial?.branchId ?? defaultBranchId);
   const [type, setType] = useState<"Product" | "Service">(initial?.type ?? "Product");
   const [image, setImage] = useState(initial?.image ?? "");
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [name, setName] = useState(initial?.name ?? "");
   const [sku, setSku] = useState(initial?.sku ?? "");
   const [barcode, setBarcode] = useState(initial?.barcode ?? "");
@@ -235,13 +276,46 @@ function ProductDialog({
   const categories = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean))) as string[];
   const brands = Array.from(new Set(allProducts.map((p) => p.brand).filter(Boolean))) as string[];
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
+    let imageUrl = image;
+
+    if (newFile) {
+      setUploading(true);
+      const toastId = toast.loading("Uploading image...");
+      try {
+        const fileExt = newFile.name.split('.').pop();
+        const uniqueId = Math.random().toString(36).substring(2, 9);
+        const fileName = `${uniqueId}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error } = await supabase.storage
+          .from("repairs")
+          .upload(filePath, newFile, { cacheControl: '3600', upsert: false });
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+          .from("repairs")
+          .getPublicUrl(filePath);
+
+        imageUrl = urlData.publicUrl;
+        toast.dismiss(toastId);
+      } catch (err: any) {
+        toast.dismiss(toastId);
+        toast.error(`Image upload failed: ${err.message}`);
+        setUploading(false);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+
     const cleanSku = sku.trim() || `SKU-${Date.now().toString().slice(-6)}`;
     onSave({
       branchId,
       type,
-      image,
+      image: imageUrl,
       name: name.trim(),
       sku: cleanSku,
       barcode: barcode || undefined,
@@ -295,11 +369,43 @@ function ProductDialog({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Image</span>
-              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(e) => setImage(e.target.files?.[0]?.name ?? "")} className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink" />
-              {image && <span className="text-xs text-muted-foreground">{image}</span>}
-            </label>
+            <div className="grid gap-1.5">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Image</span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (file) {
+                      setNewFile(file);
+                      setImage(file.name);
+                    }
+                  }}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
+                />
+                {(image || newFile) && (
+                  <div className="relative group size-10 flex-shrink-0 rounded-md border border-border overflow-hidden bg-muted">
+                    <img
+                      src={newFile ? URL.createObjectURL(newFile) : image}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImage("");
+                        setNewFile(null);
+                      }}
+                      className="absolute inset-0 flex items-center justify-center bg-ink/50 text-paper opacity-0 group-hover:opacity-100 transition"
+                      title="Remove image"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
             <Field label="Product name *" value={name} onChange={setName} required />
             <Field label="SKU" value={sku} onChange={setSku} placeholder="Auto-generated if empty" />
             <label className="grid gap-1.5">
@@ -338,8 +444,8 @@ function ProductDialog({
 
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent">Cancel</button>
-            <button type="submit" className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90">
-              {initial ? "Save changes" : "Create product"}
+            <button type="submit" disabled={uploading} className="rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-50">
+              {uploading ? "Uploading..." : (initial ? "Save changes" : "Create product")}
             </button>
           </div>
         </form>

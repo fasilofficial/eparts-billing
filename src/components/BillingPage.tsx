@@ -272,45 +272,48 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
         </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => window.history.back()}
-            className="rounded-lg p-2 hover:bg-accent border border-border bg-card transition"
-          >
-            <ArrowLeft className="size-4" />
-          </button>
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight">New Sale</h1>
-            <div className="text-xs text-muted-foreground">
-              {new Date(saleDate).toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </div>
+      <PageHeader
+        eyebrow="Sales"
+        title={
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.history.back()}
+              className="rounded-md p-1.5 hover:bg-accent border border-border bg-card transition"
+              type="button"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+            <span>New Sale</span>
           </div>
-        </div>
-        <div className="hidden sm:flex flex-wrap gap-2 sm:ml-auto">
-          <button className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent transition">
-            Drafts
-          </button>
-          <button className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent transition">
-            Save as Draft
-          </button>
-          <button
-            onClick={openPaymentCollector}
-            className="rounded-lg bg-indigo-600 text-white px-5 py-2.5 text-sm font-semibold shadow-soft hover:bg-indigo-700 transition"
-          >
-            Complete Sale
-          </button>
-        </div>
-      </div>
+        }
+        description={`Create invoices and collect payments. ${new Date(saleDate).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })}`}
+        actions={
+          <div className="flex flex-wrap gap-2 sm:ml-auto">
+            <button type="button" className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition">
+              Drafts
+            </button>
+            <button type="button" className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition">
+              Save as Draft
+            </button>
+            <button
+              type="button"
+              onClick={openPaymentCollector}
+              className="rounded-md bg-ink text-paper px-4 py-2 text-sm font-medium hover:opacity-90 transition shadow-soft"
+            >
+              Complete Sale
+            </button>
+          </div>
+        }
+      />
 
       <div className="space-y-6 animate-fade-in">
         {/* Customer and Dates Box */}
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="rounded-xl border border-border bg-card p-5">
           <div className="grid gap-4 sm:grid-cols-3">
             {/* Customer select box */}
             <div className="space-y-1.5">
@@ -318,7 +321,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               {!selectedCustomer ? (
                 <div
                   onClick={() => setCustModalOpen(true)}
-                  className="flex items-center justify-between border border-border rounded-xl p-3.5 bg-background hover:bg-accent/40 transition cursor-pointer select-none"
+                  className="flex items-center justify-between border border-border rounded-md p-2.5 bg-background hover:bg-accent/40 transition cursor-pointer select-none"
                 >
                   <div className="flex items-center gap-3">
                     <div className="grid size-10 place-items-center rounded-full bg-accent text-muted-foreground">
@@ -334,18 +337,18 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               ) : (
                 <div
                   onClick={() => setCustModalOpen(true)}
-                  className="flex items-center justify-between border border-emerald-300 rounded-xl p-3.5 bg-emerald-50/40 hover:bg-emerald-50/70 transition cursor-pointer select-none"
+                  className="flex items-center justify-between border border-border rounded-md p-2.5 bg-accent/30 hover:bg-accent/50 transition cursor-pointer select-none"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="grid size-10 place-items-center rounded-full bg-emerald-500 text-white font-bold text-base shadow-sm">
+                    <div className="grid size-10 place-items-center rounded-full bg-ink text-paper font-bold text-base shadow-sm">
                       {selectedCustomer.name[0]?.toUpperCase() || "W"}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-emerald-900">{selectedCustomer.name}</div>
-                      <div className="text-xs text-emerald-700">{selectedCustomer.phone}</div>
+                      <div className="text-sm font-bold text-foreground">{selectedCustomer.name}</div>
+                      <div className="text-xs text-muted-foreground">{selectedCustomer.phone}</div>
                     </div>
                   </div>
-                  <Check className="size-4 text-emerald-600 font-bold" />
+                  <Check className="size-4 text-foreground font-bold" />
                 </div>
               )}
             </div>
@@ -358,7 +361,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 required
                 value={saleDate}
                 onChange={(e) => setSaleDate(e.target.value)}
-                className="rounded-xl border border-border bg-background px-4 py-3.5 text-sm outline-none focus:border-ink w-full"
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full"
               />
             </label>
 
@@ -370,14 +373,14 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 placeholder="dd/mm/yyyy"
-                className="rounded-xl border border-border bg-background px-4 py-3.5 text-sm outline-none focus:border-ink w-full"
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full"
               />
             </label>
           </div>
         </div>
 
         {/* Sale Items Table */}
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="bg-muted/10 px-5 py-4 border-b border-border/80 flex items-center justify-between">
             <h2 className="text-sm font-bold text-foreground">Sale Items</h2>
             {isAdmin && (
@@ -387,7 +390,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                   setBranchId(e.target.value);
                   setItems([]);
                 }}
-                className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs outline-none focus:border-ink"
+                className="rounded-md border border-border bg-background px-2.5 py-1 text-xs outline-none focus:border-ink"
               >
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -406,12 +409,12 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 placeholder="Search and select product to add to sale..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-sm outline-none focus:border-ink"
+                className="w-full rounded-md border border-border bg-background pl-10 pr-4 py-2 text-sm outline-none focus:border-ink"
               />
               
               {/* Product search suggestions */}
               {query && (
-                <ul className="absolute left-0 right-0 top-full mt-2 z-40 bg-card border border-border rounded-xl shadow-paper overflow-hidden divide-y divide-border">
+                <ul className="absolute left-0 right-0 top-full mt-2 z-40 bg-card border border-border rounded-md shadow-paper overflow-hidden divide-y divide-border">
                   {filteredProducts.map((p) => (
                     <li key={p.id}>
                       <button
@@ -434,7 +437,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 </ul>
               )}
             </div>
-            <button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 shadow-soft transition shrink-0">
+            <button className="rounded-md border border-border bg-card p-2 text-foreground hover:bg-accent transition shrink-0 flex items-center justify-center">
               <QrCode className="size-4" />
             </button>
           </div>
@@ -562,35 +565,35 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
         </div>
 
         {/* Sale Notes and Summary Grid */}
-        <div className="grid gap-6 lg:grid-cols-2">
+         <div className="grid gap-6 lg:grid-cols-2">
           {/* Sale Notes Card */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
             <h2 className="text-sm font-bold text-foreground">Sale Notes</h2>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any notes or special instructions for this sale..."
-              className="min-h-36 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-ink"
+              className="min-h-36 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
             />
           </div>
 
           {/* Summary Card */}
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+          <div className="rounded-xl border border-border bg-card p-5 space-y-4">
             <h2 className="text-sm font-bold text-foreground">Summary</h2>
             
             {/* Sale Discount Box */}
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/20 p-4 space-y-3 border-dashed">
-              <div className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
-                <SlidersHorizontal className="size-3.5 text-emerald-700" />
+            <div className="rounded-md border border-border bg-muted/25 p-3.5 space-y-3 border-dashed">
+              <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <SlidersHorizontal className="size-3.5 text-muted-foreground" />
                 Sale Discount
               </div>
-              <div className="grid grid-cols-2 gap-2 border border-emerald-200 bg-white rounded-lg p-1">
+              <div className="grid grid-cols-2 gap-2 border border-border bg-background rounded-md p-1">
                 <button
                   type="button"
                   onClick={() => setOrderDiscountType("Percentage")}
                   className={`rounded-md py-1.5 text-center text-xs font-semibold transition cursor-pointer select-none ${
                     orderDiscountType === "Percentage"
-                      ? "bg-emerald-600 text-white"
+                      ? "bg-ink text-paper"
                       : "text-foreground hover:bg-accent"
                   }`}
                 >
@@ -601,7 +604,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                   onClick={() => setOrderDiscountType("Fixed")}
                   className={`rounded-md py-1.5 text-center text-xs font-semibold transition cursor-pointer select-none ${
                     orderDiscountType === "Fixed"
-                      ? "bg-emerald-600 text-white"
+                      ? "bg-ink text-paper"
                       : "text-foreground hover:bg-accent"
                   }`}
                 >
@@ -613,7 +616,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 value={orderDiscountValue}
                 onChange={(e) => setOrderDiscountValue(e.target.value)}
                 placeholder="0"
-                className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 font-semibold num"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink font-semibold num"
               />
             </div>
 
@@ -623,7 +626,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                 <span className="font-semibold text-foreground num">{fmtMoney(itemsSubtotal)}</span>
               </div>
               {orderDiscount > 0 && (
-                <div className="flex justify-between items-center text-emerald-700">
+                <div className="flex justify-between items-center text-muted-foreground">
                   <span>Order Discount:</span>
                   <span className="font-semibold num">-{fmtMoney(orderDiscount)}</span>
                 </div>
@@ -636,7 +639,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               )}
               <div className="flex justify-between items-baseline pt-3 border-t border-border/60">
                 <span className="font-bold text-foreground">Grand Total:</span>
-                <span className="font-display text-3xl font-bold text-indigo-600 num">
+                <span className="font-display text-3xl font-bold text-ink num">
                   {fmtMoney(grandTotal)}
                 </span>
               </div>
@@ -648,15 +651,15 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
         <div className="flex sm:hidden flex-col gap-2 mt-6">
           <button
             onClick={openPaymentCollector}
-            className="w-full rounded-xl bg-indigo-600 text-white py-3.5 text-sm font-bold shadow-soft hover:bg-indigo-700 transition text-center"
+            className="w-full rounded-md bg-ink text-paper py-2.5 text-sm font-semibold shadow-soft hover:opacity-90 transition text-center"
           >
             Complete Sale
           </button>
           <div className="grid grid-cols-2 gap-2">
-            <button className="w-full rounded-xl border border-border bg-card py-3 text-center text-sm font-bold hover:bg-accent transition">
+            <button className="w-full rounded-md border border-border bg-card py-2 text-center text-sm font-semibold hover:bg-accent transition">
               Save as Draft
             </button>
-            <button className="w-full rounded-xl border border-border bg-card py-3 text-center text-sm font-bold hover:bg-accent transition">
+            <button className="w-full rounded-md border border-border bg-card py-2 text-center text-sm font-semibold hover:bg-accent transition">
               Drafts
             </button>
           </div>
@@ -687,7 +690,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               {/* Quick walkin customer option button */}
               <button
                 onClick={selectQuickWalkin}
-                className="w-full text-center border border-indigo-200 bg-indigo-50/30 hover:bg-indigo-50/60 text-indigo-700 rounded-xl py-3 text-sm font-semibold transition cursor-pointer select-none"
+                className="w-full text-center border border-border bg-card hover:bg-accent text-foreground rounded-md py-2.5 text-sm font-semibold transition cursor-pointer select-none"
               >
                 Quick sale without customer details
               </button>
@@ -698,11 +701,11 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                   placeholder="Search customer by name or phone..."
                   value={customerSearchQuery}
                   onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background pl-9 pr-4 py-2.5 text-sm outline-none focus:border-ink"
+                  className="w-full rounded-md border border-border bg-background pl-9 pr-4 py-2 text-sm outline-none focus:border-ink"
                 />
               </div>
 
-              <ul className="max-h-60 overflow-y-auto divide-y divide-border/60 border border-border rounded-xl">
+              <ul className="max-h-60 overflow-y-auto divide-y divide-border/60 border border-border rounded-md">
                 {filteredCustomers.map((c) => (
                   <li key={c.id}>
                     <button
@@ -744,14 +747,14 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
           onClick={() => setPaymentModalOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-paper my-8 animate-fade-in"
+            className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-paper my-8 animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between border-b border-border/60 pb-3">
               <h2 className="text-xl font-bold text-foreground">Complete Payment</h2>
               <button
                 onClick={() => setPaymentModalOpen(false)}
-                className="rounded-lg p-1.5 hover:bg-accent transition cursor-pointer"
+                className="rounded-md p-1.5 hover:bg-accent transition cursor-pointer"
               >
                 <X className="size-4" />
               </button>
@@ -759,9 +762,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
 
             <div className="space-y-4">
               {/* Collect Payment Summary card */}
-              <div className="rounded-xl border border-border bg-muted/10 p-4 space-y-2">
+              <div className="rounded-md border border-border bg-muted/10 p-4 space-y-2">
                 <div className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                  <Wallet className="size-4 text-indigo-600" />
+                  <Wallet className="size-4 text-ink" />
                   Collect Payment
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center pt-1.5 border-t border-border/40">
@@ -805,9 +808,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                           else if (opt === "Quarter") setAmountToCollect((grandTotal / 4).toFixed(2));
                           else if (opt === "10%") setAmountToCollect((grandTotal / 10).toFixed(2));
                         }}
-                        className={`rounded-xl py-2 text-center text-xs font-bold transition cursor-pointer select-none ${
+                        className={`rounded-md py-2 text-center text-xs font-semibold transition cursor-pointer select-none ${
                           active
-                            ? "bg-indigo-600 text-white shadow-sm"
+                            ? "bg-ink text-paper shadow-sm"
                             : "border border-border bg-card text-foreground hover:bg-accent"
                         }`}
                       >
@@ -821,17 +824,14 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               {/* Amount to Collect */}
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Amount to Collect *</span>
-                <div className="relative rounded-xl border border-emerald-400 bg-emerald-50/10 px-4 py-2.5 flex items-center justify-between">
-                  <span className="text-2xl font-semibold text-foreground/70">₹</span>
+                <div className="relative rounded-md border border-border bg-background px-3 py-2 flex items-center justify-between">
+                  <span className="text-xl font-semibold text-foreground/50">₹</span>
                   <input
                     type="number"
                     value={amountToCollect}
                     onChange={(e) => setAmountToCollect(e.target.value)}
-                    className="w-full text-center text-2xl font-bold bg-transparent outline-none border-none py-1 num"
+                    className="w-full text-center text-xl font-bold bg-transparent outline-none border-none py-0.5 num"
                   />
-                  <div className="text-emerald-600 cursor-pointer p-1">
-                    <Plus className="size-4" />
-                  </div>
                 </div>
               </div>
 
@@ -843,18 +843,18 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                     <div
                       key={method}
                       onClick={() => setPaymentMethod(method)}
-                      className={`relative border rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none transition ${
+                      className={`relative border rounded-md p-3.5 flex flex-col items-center justify-center gap-1 cursor-pointer select-none transition ${
                         paymentMethod === method
-                          ? "border-indigo-600 bg-indigo-50/40"
+                          ? "border-ink bg-accent/20"
                           : "border-border bg-card hover:bg-accent"
                       }`}
                     >
-                      <Coins className="size-5 text-indigo-600" />
-                      <span className="text-sm font-bold text-foreground">{method}</span>
+                      <Coins className="size-5 text-ink" />
+                      <span className="text-sm font-semibold text-foreground">{method}</span>
                       
                       {paymentMethod === method && (
-                        <div className="absolute top-2 right-2 bg-indigo-600 text-white rounded-full p-0.5">
-                          <Check className="size-2.5 font-bold" />
+                        <div className="absolute top-2 right-2 bg-ink text-paper rounded-full p-0.5">
+                          <Check className="size-2.5" />
                         </div>
                       )}
                     </div>
@@ -868,9 +868,9 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                   Payment Account {paymentMethod === "Cash" ? "(Auto-selected)" : ""}
                 </span>
                 <div
-                  className={`rounded-xl border px-3 py-2 bg-background flex items-center justify-between ${
+                  className={`rounded-md border px-3 py-1.5 bg-background flex items-center justify-between ${
                     paymentMethod === "Cash" && activeAccounts.length > 0
-                      ? "border-emerald-400 bg-emerald-50/10"
+                      ? "border-border bg-accent/10"
                       : "border-border"
                   }`}
                 >
@@ -892,7 +892,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                     )}
                   </select>
                   {paymentMethod === "Cash" && activeAccounts.length > 0 && (
-                    <Check className="size-4 text-emerald-600 font-bold ml-2" />
+                    <Check className="size-4 text-ink font-bold ml-2" />
                   )}
                 </div>
               </div>
@@ -905,7 +905,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                     placeholder="Enter reference number..."
                     value={transactionReference}
                     onChange={(e) => setTransactionReference(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-ink"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
                   />
                 </div>
               )}
@@ -966,7 +966,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-2 rounded-xl bg-paper border border-border px-4 py-2 text-sm font-bold text-ink hover:opacity-90 transition shadow-soft"
+                className="inline-flex items-center gap-2 rounded-md bg-paper border border-border px-4 py-2 text-sm font-semibold text-ink hover:opacity-90 transition shadow-soft"
               >
                 <Printer className="size-4" /> Print
               </button>

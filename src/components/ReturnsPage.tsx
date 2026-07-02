@@ -51,7 +51,9 @@ export function ReturnsPage({ mode, type }: { mode: "admin" | "branch"; type: "S
   return (
     <>
       <PageHeader
+        eyebrow="Inventory"
         title={title}
+        description={`Manage and track returned products and refunds for ${type.toLowerCase()}s.`}
         actions={
           <div className="flex gap-2">
             <button

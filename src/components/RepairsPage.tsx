@@ -71,8 +71,8 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
     <>
       <PageHeader
         eyebrow="Repairs"
-        title="Create new repair"
-        description="Create repair jobs with multiple devices, issues, photos, costs, and branch ownership."
+        title="Repairs & Jobs"
+        description="Create and track repair jobs with multiple devices, issues, photos, costs, and branch ownership."
         actions={
           <button
             type="button"

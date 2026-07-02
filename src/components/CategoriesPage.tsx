@@ -36,6 +36,7 @@ export function CategoriesPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Catalog"
         title="Categories"
         description="Manage product and expense categories"
         actions={

@@ -34,6 +34,7 @@ export function BrandsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Catalog"
         title="Brands"
         description="Manage your product brand entities globally"
         actions={

@@ -44,6 +44,7 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
   return (
     <>
       <PageHeader
+        eyebrow="Finance"
         title="Payment Accounts"
         description="Manage your bank accounts, cash, and payment methods"
         actions={

@@ -35,6 +35,7 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
   return (
     <>
       <PageHeader
+        eyebrow="Finance"
         title="Account Transfers"
         description="Manage money transfers between your accounts"
         actions={

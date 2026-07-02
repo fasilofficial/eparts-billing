@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, fmtDate, fmtMoney, type Repair, type RepairItem } from "@/lib/store";
-import { Pencil, Plus, Trash2, Wrench, X } from "lucide-react";
+import { Pencil, Plus, Trash2, Wrench, X, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { ImageLightbox } from "./ImageLightbox";
@@ -41,6 +41,13 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Repair | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [customerFilter, setCustomerFilter] = useState("all");
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
+  const [expectedFrom, setExpectedFrom] = useState("");
+  const [expectedTo, setExpectedTo] = useState("");
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
     photos: string[];
@@ -61,10 +68,33 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
       repairs.filter((repair) => {
         if (!isAdmin && repair.branchId !== session?.branchId) return false;
         if (isAdmin && branchFilter !== "all" && repair.branchId !== branchFilter) return false;
+        if (statusFilter !== "all" && repair.status !== statusFilter) return false;
+        if (customerFilter !== "all" && repair.customerName !== customerFilter) return false;
+
+        if (createdFrom) {
+          const t = new Date(repair.createdAt).getTime();
+          if (t < new Date(createdFrom).getTime()) return false;
+        }
+        if (createdTo) {
+          const t = new Date(repair.createdAt).getTime();
+          if (t > new Date(createdTo).getTime() + 86400000) return false;
+        }
+
+        if (expectedFrom || expectedTo) {
+          const hasExpectedCompletionMatch = repair.items.some((item) => {
+            if (!item.expectedCompletionDate) return false;
+            const t = new Date(item.expectedCompletionDate).getTime();
+            if (expectedFrom && t < new Date(expectedFrom).getTime()) return false;
+            if (expectedTo && t > new Date(expectedTo).getTime() + 86400000) return false;
+            return true;
+          });
+          if (!hasExpectedCompletionMatch) return false;
+        }
+
         const itemText = repair.items.map((item) => `${item.brand} ${item.item} ${item.serialNumber ?? ""}`).join(" ");
         return `${repair.number} ${repair.customerName} ${itemText}`.toLowerCase().includes(query.toLowerCase());
       }),
-    [branchFilter, isAdmin, query, repairs, session?.branchId],
+    [branchFilter, isAdmin, query, repairs, session?.branchId, statusFilter, customerFilter, createdFrom, createdTo, expectedFrom, expectedTo],
   );
 
   return (
@@ -97,7 +127,10 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
         {isAdmin && (
           <select
             value={branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
+            onChange={(e) => {
+              setBranchFilter(e.target.value);
+              setCustomerFilter("all");
+            }}
             className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
           >
             <option value="all">All branches</option>
@@ -108,6 +141,17 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
             ))}
           </select>
         )}
+        <button
+          type="button"
+          onClick={() => setFilterOpen(true)}
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold transition hover:bg-accent cursor-pointer"
+        >
+          <SlidersHorizontal className="size-4 text-muted-foreground" />
+          Filter
+          {(statusFilter !== "all" || customerFilter !== "all" || createdFrom || createdTo || expectedFrom || expectedTo) && (
+            <span className="ml-1 flex size-2 rounded-full bg-ink animate-pulse" />
+          )}
+        </button>
         <div className="text-xs text-muted-foreground sm:ml-auto">{scopedRepairs.length} repairs</div>
       </div>
 
@@ -258,6 +302,37 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
         onClose={() => setLightbox((prev) => ({ ...prev, isOpen: false }))}
         onChangeIndex={(idx) => setLightbox((prev) => ({ ...prev, currentIndex: idx }))}
       />
+
+      {filterOpen && (
+        <FilterModal
+          status={statusFilter}
+          customer={customerFilter}
+          createdFrom={createdFrom}
+          createdTo={createdTo}
+          expectedFrom={expectedFrom}
+          expectedTo={expectedTo}
+          customers={customers.filter((c) => {
+            if (!isAdmin && c.branchId !== session?.branchId) return false;
+            if (isAdmin && branchFilter !== "all" && c.branchId !== branchFilter) return false;
+            return true;
+          })}
+          onStatus={setStatusFilter}
+          onCustomer={setCustomerFilter}
+          onCreatedFrom={setCreatedFrom}
+          onCreatedTo={setCreatedTo}
+          onExpectedFrom={setExpectedFrom}
+          onExpectedTo={setExpectedTo}
+          onClose={() => setFilterOpen(false)}
+          onClear={() => {
+            setStatusFilter("all");
+            setCustomerFilter("all");
+            setCreatedFrom("");
+            setCreatedTo("");
+            setExpectedFrom("");
+            setExpectedTo("");
+          }}
+        />
+      )}
     </>
   );
 }
@@ -697,5 +772,154 @@ function Field({
         className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
       />
     </label>
+  );
+}
+
+function FilterModal({
+  status,
+  customer,
+  createdFrom,
+  createdTo,
+  expectedFrom,
+  expectedTo,
+  customers,
+  onStatus,
+  onCustomer,
+  onCreatedFrom,
+  onCreatedTo,
+  onExpectedFrom,
+  onExpectedTo,
+  onClose,
+  onClear,
+}: {
+  status: string;
+  customer: string;
+  createdFrom: string;
+  createdTo: string;
+  expectedFrom: string;
+  expectedTo: string;
+  customers: { id: string; name: string }[];
+  onStatus: (v: string) => void;
+  onCustomer: (v: string) => void;
+  onCreatedFrom: (v: string) => void;
+  onCreatedTo: (v: string) => void;
+  onExpectedFrom: (v: string) => void;
+  onExpectedTo: (v: string) => void;
+  onClose: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-paper max-h-[calc(100vh-2rem)] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-center justify-between border-b border-border/40 pb-3">
+          <h2 className="font-display text-2xl">Repair Filters</h2>
+          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-accent text-muted-foreground hover:text-foreground transition cursor-pointer">
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="grid gap-4">
+          <label className="grid gap-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Status</span>
+            <select
+              value={status}
+              onChange={(e) => onStatus(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink font-semibold"
+            >
+              <option value="all">All statuses</option>
+              <option value="Open">Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Waiting for Parts">Waiting for Parts</option>
+              <option value="Ready">Ready</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Customer</span>
+            <select
+              value={customer}
+              onChange={(e) => onCustomer(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink font-semibold"
+            >
+              <option value="all">All customers</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Created From</span>
+              <input
+                type="date"
+                value={createdFrom}
+                onChange={(e) => onCreatedFrom(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full font-semibold"
+              />
+            </label>
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Created To</span>
+              <input
+                type="date"
+                value={createdTo}
+                onChange={(e) => onCreatedTo(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full font-semibold"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Expected From</span>
+              <input
+                type="date"
+                value={expectedFrom}
+                onChange={(e) => onExpectedFrom(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full font-semibold"
+              />
+            </label>
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Expected To</span>
+              <input
+                type="date"
+                value={expectedTo}
+                onChange={(e) => onExpectedTo(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full font-semibold"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 flex justify-end gap-3 pt-3 border-t border-border/60">
+            <button
+              type="button"
+              onClick={() => {
+                onClear();
+                onClose();
+              }}
+              className="w-1/2 rounded-md border border-border bg-card py-2 text-center text-sm font-semibold hover:bg-accent transition cursor-pointer"
+            >
+              Clear All
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-1/2 rounded-md bg-ink py-2 text-center text-sm font-semibold text-paper hover:opacity-90 transition cursor-pointer"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

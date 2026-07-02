@@ -4,6 +4,7 @@ import { useStore, type Staff, type Repair, type RepairItem } from "@/lib/store"
 import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, UserCheck, Phone, Mail, Award, Landmark } from "lucide-react";
 import { toast } from "sonner";
 import { ImageLightbox } from "./ImageLightbox";
+import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 
 interface StaffFormData {
   branchId: string;
@@ -42,6 +43,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Staff | null>(null);
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [staffFilter, setStaffFilter] = useState("all");
   const [expandedStaff, setExpandedStaff] = useState<Record<string, boolean>>({});
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
@@ -53,14 +55,23 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     currentIndex: 0,
   });
 
+  const staffOptions = useMemo(() => {
+    return staff.filter((s) => {
+      if (!isAdmin && s.branchId !== defaultBranchId) return false;
+      if (isAdmin && branchFilter !== "all" && s.branchId !== branchFilter) return false;
+      return true;
+    });
+  }, [staff, isAdmin, branchFilter, defaultBranchId]);
+
   const filteredStaff = useMemo(() => {
     return staff.filter((s) => {
       if (!isAdmin && s.branchId !== defaultBranchId) return false;
       if (isAdmin && branchFilter !== "all" && s.branchId !== branchFilter) return false;
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
+      if (staffFilter !== "all" && s.id !== staffFilter) return false;
       return true;
     });
-  }, [staff, isAdmin, branchFilter, defaultBranchId, statusFilter]);
+  }, [staff, isAdmin, branchFilter, defaultBranchId, statusFilter, staffFilter]);
 
   const toggleExpand = (id: string) => {
     setExpandedStaff((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -120,6 +131,57 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     }
   };
 
+  const exportHeaders = [
+    "Staff Name",
+    "Role",
+    "Branch",
+    "Status",
+    "Repair Number",
+    "Customer Name",
+    "Assigned Item",
+    "Issues",
+    "Due Date",
+    "Repair Status",
+  ];
+
+  const exportRows = useMemo(() => {
+    const rows: string[][] = [];
+    filteredStaff.forEach((s) => {
+      const branch = branches.find((b) => b.id === s.branchId);
+      const workload = getStaffWorkload(s.id);
+      if (workload.length === 0) {
+        rows.push([
+          s.name,
+          s.role,
+          branch ? branch.name : "",
+          s.status,
+          "-",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-",
+        ]);
+      } else {
+        workload.forEach(({ repair, item }) => {
+          rows.push([
+            s.name,
+            s.role,
+            branch ? branch.name : "",
+            s.status,
+            repair.number,
+            repair.customerName,
+            `${item.brand} ${item.item}`,
+            item.issues.join(", "),
+            item.expectedCompletionDate || "-",
+            repair.status,
+          ]);
+        });
+      }
+    });
+    return rows;
+  }, [filteredStaff, branches, repairs]);
+
   return (
     <>
       <PageHeader
@@ -127,16 +189,23 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
         title="Staff & Workload"
         description="Add staff members under branches, assign them repairs, and monitor their active tasks."
         actions={
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
-          >
-            <Plus className="size-4" /> New staff member
-          </button>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <ExportExcelButton
+              filename={`staff-workload-report-${new Date().toISOString().split('T')[0]}`}
+              headers={exportHeaders}
+              rows={exportRows}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(null);
+                setOpen(true);
+              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto shrink-0"
+            >
+              <Plus className="size-4" /> New staff member
+            </button>
+          </div>
         }
       />
 
@@ -144,7 +213,10 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
         {isAdmin && (
           <select
             value={branchFilter}
-            onChange={(e) => setBranchFilter(e.target.value)}
+            onChange={(e) => {
+              setBranchFilter(e.target.value);
+              setStaffFilter("all");
+            }}
             className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
           >
             <option value="all">All branches</option>
@@ -163,6 +235,18 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
           <option value="all">All status</option>
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
+        </select>
+        <select
+          value={staffFilter}
+          onChange={(e) => setStaffFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All staff</option>
+          {staffOptions.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name} ({s.role})
+            </option>
+          ))}
         </select>
         <div className="text-xs text-muted-foreground sm:ml-auto">
           {filteredStaff.length} staff members found

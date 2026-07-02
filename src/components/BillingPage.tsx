@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearch } from "@tanstack/react-router";
 import { PageHeader } from "@/components/DashboardLayout";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { useStore, fmtMoney, type Bill, type BillItem } from "@/lib/store";
@@ -17,6 +18,7 @@ import {
   Coins,
   Wallet,
   SlidersHorizontal,
+  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,11 +39,15 @@ const todayFormatted = () => {
 };
 
 export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, products, customers, paymentAccounts, addBill } = useStore();
+  const { session, branches, products, customers, repairs, paymentAccounts, addBill } = useStore();
   const isAdmin = mode === "admin";
   const [branchId, setBranchId] = useState(
     isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "",
   );
+
+  // Read repairId from URL search params (set when navigating from Repairs page)
+  const search = useSearch({ strict: false }) as { repairId?: string };
+  const linkedRepairId = search?.repairId;
   
   // Sale details state
   const [saleDate, setSaleDate] = useState(todayFormatted());
@@ -79,6 +85,41 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
   });
 
   const [issued, setIssued] = useState<Bill | null>(null);
+  const [linkedRepair, setLinkedRepair] = useState<typeof repairs[number] | null>(null);
+
+  // Pre-populate form when a repairId is present in the URL
+  useEffect(() => {
+    if (!linkedRepairId || repairs.length === 0 || customers.length === 0) return;
+    const repair = repairs.find((r) => r.id === linkedRepairId);
+    if (!repair) return;
+
+    setLinkedRepair(repair);
+
+    // Set branch to the repair's branch
+    setBranchId(repair.branchId);
+
+    // Auto-select the customer
+    const customer = customers.find((c) => c.id === repair.customerId);
+    setSelectedCustomer(
+      customer
+        ? { id: customer.id, name: customer.name, phone: customer.phone }
+        : { name: repair.customerName, phone: "" },
+    );
+
+    // Pre-fill line items from repair items
+    const repairLineItems = repair.items.map((item, idx) => ({
+      productId: `repair-item-${item.id ?? idx}`,
+      name: `${item.brand} ${item.item} – Repair Service`,
+      sku: undefined,
+      price: item.serviceCost ?? item.estimatedCost ?? 0,
+      qty: item.quantity || 1,
+      taxPercent: 0,
+      discountType: "%" as const,
+      discountValue: 0,
+    }));
+    setItems(repairLineItems);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedRepairId, repairs, customers]);
 
   // Filtered products list for product search dropdown
   const filteredProducts = useMemo(
@@ -312,6 +353,33 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
       />
 
       <div className="space-y-6 animate-fade-in">
+        {/* Linked-repair banner */}
+        {linkedRepair && (
+          <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3.5">
+            <div className="grid size-9 place-items-center rounded-full bg-ink text-paper shrink-0">
+              <Wrench className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Billing for Repair</div>
+              <div className="font-bold text-foreground">
+                {linkedRepair.number} · {linkedRepair.customerName}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLinkedRepair(null);
+                setItems([]);
+                setSelectedCustomer(null);
+              }}
+              className="ml-auto rounded-md p-1.5 hover:bg-accent text-muted-foreground transition cursor-pointer"
+              title="Unlink repair"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
+
         {/* Customer and Dates Box */}
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="grid gap-4 sm:grid-cols-3">

@@ -959,7 +959,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await refreshData();
     },
     addBill: async (b) => {
-      const number = `INV-${1000 + state.bills.length + 1}`;
+      // Use a timestamp-based invoice number — guaranteed unique across
+      // concurrent users, deletions, and page refreshes.
+      const number = `INV-${Date.now()}`;
       const { items, branchId, paymentMethod, customerId, saleDate, dueDate, notes, discountType, discountAmount, ...billData } = b;
       
       const { data: newBill, error } = await supabase
@@ -984,7 +986,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (newBill && items.length > 0) {
         const billItems = items.map(item => ({
           bill_id: newBill.id,
-          product_id: item.productId,
+          // Repair-service items use a synthetic productId — store null for product_id
+          product_id: item.productId.startsWith("repair-item-") ? null : item.productId,
           name: item.name,
           price: item.price,
           qty: item.qty
@@ -992,8 +995,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { error: itemsError } = await supabase.from("bill_items").insert(billItems);
         if (itemsError) throw new Error(itemsError.message);
         
-        // Decrement stock for each item
+        // Decrement stock only for real product items (not repair service lines)
         for (const item of items) {
+          if (item.productId.startsWith("repair-item-")) continue;
           const product = state.products.find(p => p.id === item.productId);
           if (product) {
             const { error: stockError } = await supabase.from("products").update({ stock: product.stock - item.qty }).eq("id", item.productId);

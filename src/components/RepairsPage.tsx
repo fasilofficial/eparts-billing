@@ -1,10 +1,11 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
 import { useStore, fmtDate, fmtMoney, type Repair, type RepairItem } from "@/lib/store";
-import { Pencil, Plus, Trash2, Wrench, X, SlidersHorizontal } from "lucide-react";
+import { Pencil, Plus, Trash2, Wrench, X, SlidersHorizontal, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { ImageLightbox } from "./ImageLightbox";
+import { useNavigate } from "@tanstack/react-router";
 
 const defaultIssues = ["Screen Broken", "Battery Issue", "Charging Problem", "Water Damage"];
 
@@ -37,6 +38,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
   const { session, branches, customers, repairs, addRepair, updateRepair, deleteRepair } = useStore();
   const isAdmin = mode === "admin";
   const defaultBranchId = isAdmin ? session?.defaultBranchId || branches[0]?.id || "" : session?.branchId || "";
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Repair | null>(null);
   const [query, setQuery] = useState("");
@@ -179,6 +181,20 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                   <div className="num text-lg">{fmtMoney(estimate)}</div>
                   </div>
                   <div className="flex gap-1 sm:mt-3 sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate({
+                          to: isAdmin ? "/admin/billing" : "/branch/billing",
+                          search: { repairId: repair.id },
+                        })
+                      }
+                      className="rounded-md p-1.5 hover:bg-accent text-muted-foreground hover:text-foreground transition"
+                      aria-label={`Create bill for ${repair.number}`}
+                      title="Create bill for this repair"
+                    >
+                      <Receipt className="size-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => {

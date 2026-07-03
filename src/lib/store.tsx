@@ -308,6 +308,7 @@ interface StoreCtx extends StoreState {
   updateProduct: (id: string, patch: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   addBill: (b: Omit<Bill, "id" | "number" | "createdAt">) => Promise<Bill | null>;
+  updateBill: (id: string, patch: Partial<Omit<Bill, "id" | "number" | "createdAt">>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
   addCustomer: (c: Omit<Customer, "id" | "createdAt">) => Promise<Customer | null>;
   updateCustomer: (id: string, patch: Omit<Customer, "id" | "createdAt">) => Promise<void>;
@@ -1084,6 +1085,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createdAt: newBill.created_at,
         items,
       } as any;
+    },
+    updateBill: async (id, patch) => {
+      if (session?.role !== "admin") {
+        throw new Error("Unauthorized: Only admins can edit bills.");
+      }
+      const { items, branchId, customerId, saleDate, dueDate, notes, discountType, discountAmount, paymentMethod, ...rest } = patch as any;
+      const dbPatch: any = { ...rest };
+      if (paymentMethod !== undefined) dbPatch.payment_method = paymentMethod;
+      if (branchId !== undefined) dbPatch.branch_id = branchId;
+      if (customerId !== undefined) dbPatch.customer_id = customerId ?? null;
+      if (saleDate !== undefined) dbPatch.sale_date = saleDate;
+      if (dueDate !== undefined) dbPatch.due_date = dueDate ?? null;
+      if (notes !== undefined) dbPatch.notes = notes ?? null;
+      if (discountType !== undefined) dbPatch.discount_type = discountType;
+      if (discountAmount !== undefined) dbPatch.discount_amount = discountAmount;
+
+      const { error } = await supabase.from("bills").update(dbPatch).eq("id", id);
+      if (error) throw new Error(error.message);
+
+      // Replace bill items if provided
+      if (items !== undefined) {
+        const { error: delErr } = await supabase.from("bill_items").delete().eq("bill_id", id);
+        if (delErr) throw new Error(delErr.message);
+        if (items.length > 0) {
+          const newItems = items.map((item: any) => ({
+            bill_id: id,
+            product_id: item.productId?.startsWith("repair-item-") ? null : (item.productId ?? null),
+            name: item.name,
+            price: item.price,
+            qty: item.qty,
+          }));
+          const { error: insErr } = await supabase.from("bill_items").insert(newItems);
+          if (insErr) throw new Error(insErr.message);
+        }
+      }
+
+      await refreshData();
     },
     deleteBill: async (id) => {
       if (session?.role !== "admin") {

@@ -1111,7 +1111,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (items.length > 0) {
           const newItems = items.map((item: any) => ({
             bill_id: id,
-            product_id: item.productId?.startsWith("repair-item-") ? null : (item.productId ?? null),
+            product_id:
+              !item.productId ||
+              item.productId.startsWith("repair-item-") ||
+              item.productId.startsWith("manual-")
+                ? null
+                : item.productId,
             name: item.name,
             price: item.price,
             qty: item.qty,

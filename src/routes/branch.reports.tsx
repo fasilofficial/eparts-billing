@@ -19,7 +19,8 @@ function BranchReports() {
   const filtered = useMemo(
     () =>
       mine.filter((b) => {
-        const t = new Date(b.createdAt).getTime();
+        const effectiveDate = b.saleDate || b.createdAt;
+        const t = new Date(effectiveDate).getTime();
         if (from && t < new Date(from).getTime()) return false;
         if (to && t > new Date(to).getTime() + 86400000) return false;
         return true;
@@ -115,7 +116,7 @@ function BranchReports() {
                 <td className="px-5 py-3 font-medium">{b.number}</td>
                 <td className="px-5 py-3 text-muted-foreground">{b.customer ?? "—"}</td>
                 <td className="px-5 py-3 text-muted-foreground">{b.paymentMethod ?? "Cash"}</td>
-                <td className="px-5 py-3 text-muted-foreground">{fmtDate(b.createdAt)}</td>
+                <td className="px-5 py-3 text-muted-foreground">{fmtDate(b.saleDate || b.createdAt)}</td>
                 <td className="px-5 py-3 text-right num">
                   {b.items.reduce((s, i) => s + i.qty, 0)}
                 </td>

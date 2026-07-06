@@ -290,6 +290,20 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
           defaultBranchId={defaultBranchId}
           onClose={closeDialog}
           onSave={async (data) => {
+            const formattedPhone = data.phone.trim().replace(/\D/g, "");
+            if (formattedPhone) {
+              const isDuplicate = customers.some(
+                (c) =>
+                  c.branchId === data.branchId &&
+                  c.phone.replace(/\D/g, "") === formattedPhone &&
+                  c.id !== editing?.id
+              );
+              if (isDuplicate) {
+                toast.error("A customer with this phone number already exists in this branch!");
+                return;
+              }
+            }
+
             try {
               if (editing) {
                 await updateCustomer(editing.id, data);

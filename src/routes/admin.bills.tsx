@@ -424,14 +424,14 @@ function AdminBills() {
         />
         <input
           type="number"
-          placeholder="Min $"
+          placeholder="Min ₹"
           value={minAmt}
           onChange={(e) => setMinAmt(e.target.value)}
           className="rounded-md border border-border bg-background px-3 py-2 text-sm"
         />
         <input
           type="number"
-          placeholder="Max $"
+          placeholder="Max ₹"
           value={maxAmt}
           onChange={(e) => setMaxAmt(e.target.value)}
           className="rounded-md border border-border bg-background px-3 py-2 text-sm"

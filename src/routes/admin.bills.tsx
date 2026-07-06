@@ -329,7 +329,7 @@ function AdminBills() {
       const effectiveDate = b.saleDate || b.createdAt;
       const t = new Date(effectiveDate).getTime();
       if (from && t < new Date(from).getTime()) return false;
-      if (to && t > new Date(to).getTime() + 86400000) return false;
+      if (to && t >= new Date(to).getTime() + 86400000) return false;
       if (minAmt && b.total < parseFloat(minAmt)) return false;
       if (maxAmt && b.total > parseFloat(maxAmt)) return false;
       return true;

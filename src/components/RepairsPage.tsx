@@ -84,7 +84,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
         }
         if (createdTo) {
           const t = new Date(repair.createdAt).getTime();
-          if (t > new Date(createdTo).getTime() + 86400000) return false;
+          if (t >= new Date(createdTo).getTime() + 86400000) return false;
         }
 
         if (expectedFrom || expectedTo) {
@@ -92,7 +92,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
             if (!item.expectedCompletionDate) return false;
             const t = new Date(item.expectedCompletionDate).getTime();
             if (expectedFrom && t < new Date(expectedFrom).getTime()) return false;
-            if (expectedTo && t > new Date(expectedTo).getTime() + 86400000) return false;
+            if (expectedTo && t >= new Date(expectedTo).getTime() + 86400000) return false;
             return true;
           });
           if (!hasExpectedCompletionMatch) return false;

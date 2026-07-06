@@ -22,7 +22,7 @@ function BranchReports() {
         const effectiveDate = b.saleDate || b.createdAt;
         const t = new Date(effectiveDate).getTime();
         if (from && t < new Date(from).getTime()) return false;
-        if (to && t > new Date(to).getTime() + 86400000) return false;
+        if (to && t >= new Date(to).getTime() + 86400000) return false;
         return true;
       }),
     [mine, from, to],

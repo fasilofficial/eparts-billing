@@ -41,6 +41,8 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
   const [payStatus, setPayStatus] = useState<"All" | "Pending" | "Paid">("All");
   const [amountFrom, setAmountFrom] = useState("0");
   const [amountTo, setAmountTo] = useState("");
+  const [createdFrom, setCreatedFrom] = useState("");
+  const [createdTo, setCreatedTo] = useState("");
 
   const closeDialog = () => {
     setOpen(false);
@@ -76,6 +78,18 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
           if (!isNaN(toVal) && pendingAmount > toVal) return false;
         }
 
+        // 5. Created Date From
+        if (createdFrom) {
+          const t = new Date(customer.createdAt).getTime();
+          if (t < new Date(createdFrom).getTime()) return false;
+        }
+
+        // 6. Created Date To
+        if (createdTo) {
+          const t = new Date(customer.createdAt).getTime();
+          if (t >= new Date(createdTo).getTime() + 86400000) return false;
+        }
+
         const text = `${customer.name} ${customer.phone} ${customer.email ?? ""}`.toLowerCase();
         return query === "" || text.includes(query.toLowerCase());
       }),
@@ -89,6 +103,8 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
       payStatus,
       amountFrom,
       amountTo,
+      createdFrom,
+      createdTo,
     ],
   );
 
@@ -300,12 +316,18 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
           setAmountFrom={setAmountFrom}
           amountTo={amountTo}
           setAmountTo={setAmountTo}
+          createdFrom={createdFrom}
+          setCreatedFrom={setCreatedFrom}
+          createdTo={createdTo}
+          setCreatedTo={setCreatedTo}
           onClose={() => setFilterOpen(false)}
           onClear={() => {
             setCustType("All");
             setPayStatus("All");
             setAmountFrom("0");
             setAmountTo("");
+            setCreatedFrom("");
+            setCreatedTo("");
           }}
         />
       )}
@@ -322,6 +344,10 @@ function CustomerFilterModal({
   setAmountFrom,
   amountTo,
   setAmountTo,
+  createdFrom,
+  setCreatedFrom,
+  createdTo,
+  setCreatedTo,
   onClose,
   onClear,
 }: {
@@ -333,6 +359,10 @@ function CustomerFilterModal({
   setAmountFrom: (v: string) => void;
   amountTo: string;
   setAmountTo: (v: string) => void;
+  createdFrom: string;
+  setCreatedFrom: (v: string) => void;
+  createdTo: string;
+  setCreatedTo: (v: string) => void;
   onClose: () => void;
   onClear: () => void;
 }) {
@@ -342,33 +372,33 @@ function CustomerFilterModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[28rem] rounded-2xl border border-border bg-card p-6 shadow-paper animate-fade-in"
+        className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-paper max-h-[calc(100vh-2rem)] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-foreground">Filter Customers</h2>
+        <div className="mb-5 flex items-center justify-between border-b border-border/40 pb-3">
+          <h2 className="font-display text-2xl">Filter Customers</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 hover:bg-accent transition cursor-pointer"
+            className="rounded-md p-1.5 hover:bg-accent text-muted-foreground hover:text-foreground transition cursor-pointer"
           >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* Customer Type Toggle */}
-          <div className="space-y-2">
-            <span className="text-sm font-semibold text-foreground">Customer Type</span>
+          <div className="space-y-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Customer Type</span>
             <div className="grid grid-cols-3 gap-2">
               {(["All", "Business", "Direct"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setCustType(t)}
-                  className={`rounded-xl py-2 text-center text-sm font-medium transition cursor-pointer select-none ${
+                  className={`rounded-md py-2 text-center text-sm font-medium transition cursor-pointer select-none ${
                     custType === t
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "border border-border bg-card text-foreground hover:bg-accent"
+                      ? "bg-ink text-paper font-semibold"
+                      : "border border-border bg-card text-muted-foreground hover:bg-accent"
                   }`}
                 >
                   {t}
@@ -378,18 +408,18 @@ function CustomerFilterModal({
           </div>
 
           {/* Payment Status Toggle */}
-          <div className="space-y-2">
-            <span className="text-sm font-semibold text-foreground">Payment Status</span>
+          <div className="space-y-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Payment Status</span>
             <div className="grid grid-cols-3 gap-2">
               {(["All", "Pending", "Paid"] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setPayStatus(s)}
-                  className={`rounded-xl py-2 text-center text-sm font-medium transition cursor-pointer select-none ${
+                  className={`rounded-md py-2 text-center text-sm font-medium transition cursor-pointer select-none ${
                     payStatus === s
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "border border-border bg-card text-foreground hover:bg-accent"
+                      ? "bg-ink text-paper font-semibold"
+                      : "border border-border bg-card text-muted-foreground hover:bg-accent"
                   }`}
                 >
                   {s}
@@ -400,51 +430,76 @@ function CustomerFilterModal({
 
           {/* Pending Amount From */}
           <div className="space-y-1.5">
-            <span className="text-sm font-semibold text-foreground">Pending Amount From</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Pending Amount From</span>
             <input
               type="number"
               value={amountFrom}
               onChange={(e) => setAmountFrom(e.target.value)}
               placeholder="0"
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink transition"
             />
-            <span className="text-xs text-muted-foreground block">Minimum pending amount</span>
+            <span className="text-[10px] text-muted-foreground block">Minimum pending amount</span>
           </div>
 
           {/* Pending Amount To */}
           <div className="space-y-1.5">
-            <span className="text-sm font-semibold text-foreground">Pending Amount To</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Pending Amount To</span>
             <input
               type="number"
               value={amountTo}
               onChange={(e) => setAmountTo(e.target.value)}
               placeholder="No limit"
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 outline-none transition"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink transition"
             />
-            <span className="text-xs text-muted-foreground block font-sans">
+            <span className="text-[10px] text-muted-foreground block font-sans">
               Maximum pending amount (leave empty for no limit)
             </span>
           </div>
 
+          {/* Created Date Range */}
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Created From
+              </span>
+              <input
+                type="date"
+                value={createdFrom}
+                onChange={(e) => setCreatedFrom(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full"
+              />
+            </label>
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Created To
+              </span>
+              <input
+                type="date"
+                value={createdTo}
+                onChange={(e) => setCreatedTo(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full"
+              />
+            </label>
+          </div>
+
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="mt-4 flex justify-end gap-3 pt-3 border-t border-border/60">
             <button
               type="button"
               onClick={() => {
                 onClear();
                 onClose();
               }}
-              className="w-full rounded-xl bg-muted/60 py-3 text-center text-sm font-semibold text-foreground transition hover:bg-muted/80 cursor-pointer"
+              className="w-1/2 rounded-md border border-border bg-card py-2 text-center text-sm font-semibold hover:bg-accent transition cursor-pointer"
             >
-              Clear
+              Clear All
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-center text-sm font-semibold text-white transition hover:bg-indigo-700 cursor-pointer"
+              className="w-1/2 rounded-md bg-ink py-2 text-center text-sm font-semibold text-paper hover:opacity-90 transition cursor-pointer"
             >
-              <Check className="size-4" />
-              Apply Filters
+              Apply
             </button>
           </div>
         </div>

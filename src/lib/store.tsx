@@ -266,6 +266,7 @@ export interface Repair {
   customerName: string;
   status: string;
   createdAt: string;
+  entryDate?: string;
   items: RepairItem[];
 }
 
@@ -701,6 +702,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         customerName: r.customer_name,
         status: r.status ?? "Open",
         createdAt: r.created_at,
+        entryDate: r.entry_date || r.created_at,
         items: (r.items || []).map((i: any) => ({
           id: i.id,
           repairId: i.repair_id,
@@ -1190,7 +1192,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     addRepair: async (r) => {
       const number = `REP-${1000 + state.repairs.length + 1}`;
-      const { items, branchId, customerId, customerName } = r;
+      const { items, branchId, customerId, customerName, entryDate } = r;
       const { data: repair, error } = await supabase
         .from("repairs")
         .insert([
@@ -1200,6 +1202,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             customer_id: customerId || null,
             customer_name: customerName,
             status: "Open",
+            entry_date: entryDate ? new Date(entryDate).toISOString() : undefined,
           },
         ])
         .select()
@@ -1221,11 +1224,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         customerName: repair.customer_name,
         status: repair.status,
         createdAt: repair.created_at,
+        entryDate: repair.entry_date || repair.created_at,
         items,
       };
     },
     updateRepair: async (id, patch) => {
-      const { items, branchId, customerId, customerName, status } = patch;
+      const { items, branchId, customerId, customerName, status, entryDate } = patch;
       const { error } = await supabase
         .from("repairs")
         .update({
@@ -1233,6 +1237,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           customer_id: customerId || null,
           customer_name: customerName,
           status: status || "Open",
+          entry_date: entryDate ? new Date(entryDate).toISOString() : undefined,
         })
         .eq("id", id);
       if (error) throw new Error(error.message);

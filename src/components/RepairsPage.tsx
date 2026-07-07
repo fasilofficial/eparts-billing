@@ -16,6 +16,7 @@ type RepairFormData = {
   customerId?: string;
   customerName: string;
   status: string;
+  entryDate?: string;
   items: RepairItem[];
 };
 
@@ -79,11 +80,11 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
         if (customerFilter !== "all" && repair.customerName !== customerFilter) return false;
 
         if (createdFrom) {
-          const t = new Date(repair.createdAt).getTime();
+          const t = new Date(repair.entryDate || repair.createdAt).getTime();
           if (t < new Date(createdFrom).getTime()) return false;
         }
         if (createdTo) {
-          const t = new Date(repair.createdAt).getTime();
+          const t = new Date(repair.entryDate || repair.createdAt).getTime();
           if (t >= new Date(createdTo).getTime() + 86400000) return false;
         }
 
@@ -202,7 +203,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                   </div>
                   <div className="mt-1 text-sm text-muted-foreground">
                     {repair.customerName} · {branch?.name ?? "Unknown branch"} ·{" "}
-                    {fmtDate(repair.createdAt)}
+                    {fmtDate(repair.entryDate || repair.createdAt)}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-start justify-between gap-3 sm:block sm:text-right">
@@ -423,6 +424,11 @@ function RepairDialog({
   const [customerQuery, setCustomerQuery] = useState(initial?.customerName ?? "");
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
   const [status, setStatus] = useState(initial?.status ?? "Open");
+  const [entryDate, setEntryDate] = useState(
+    initial?.entryDate
+      ? new Date(initial.entryDate).toLocaleDateString("sv-SE")
+      : new Date().toLocaleDateString("sv-SE")
+  );
   const [items, setItems] = useState<DraftItem[]>(
     initial?.items.length
       ? initial.items.map((item) => ({ ...item, draftIssue: "" }))
@@ -522,6 +528,7 @@ function RepairDialog({
         customerId: selectedCustomer?.id,
         customerName,
         status,
+        entryDate,
         items: cleanItems,
       });
     } catch (err: any) {
@@ -624,7 +631,7 @@ function RepairDialog({
               )}
             </label>
             <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Status</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Status</span>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -638,6 +645,13 @@ function RepairDialog({
                 <option>Cancelled</option>
               </select>
             </label>
+            <Field
+              label="Entry Date"
+              type="date"
+              value={entryDate}
+              onChange={setEntryDate}
+              required
+            />
           </div>
 
           <div className="grid gap-4">
@@ -1074,7 +1088,7 @@ function FilterModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1.5 font-sans">
               <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Created From
+                Entry Date From
               </span>
               <input
                 type="date"
@@ -1085,7 +1099,7 @@ function FilterModal({
             </label>
             <label className="grid gap-1.5 font-sans">
               <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Created To
+                Entry Date To
               </span>
               <input
                 type="date"

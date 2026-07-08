@@ -1191,7 +1191,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await refreshData();
     },
     addRepair: async (r) => {
-      const number = `REP-${1000 + state.repairs.length + 1}`;
+      const maxNum = state.repairs.reduce((max, repair) => {
+        const match = repair.number?.match(/^REP-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          return num > max ? num : max;
+        }
+        return max;
+      }, 1000);
+      const number = `REP-${maxNum + 1}`;
       const { items, branchId, customerId, customerName, entryDate } = r;
       const { data: repair, error } = await supabase
         .from("repairs")
@@ -1293,7 +1301,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       await refreshData();
     },
     addPurchaseOrder: async (p) => {
-      const number = `PO-${1000 + state.purchaseOrders.length + 1}`;
+      const maxNum = state.purchaseOrders.reduce((max, po) => {
+        const match = po.number?.match(/^PO-(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          return num > max ? num : max;
+        }
+        return max;
+      }, 1000);
+      const number = `PO-${maxNum + 1}`;
       const { data, error } = await supabase
         .from("purchase_orders")
         .insert([purchaseOrderToDb(p, number)])
@@ -1334,7 +1350,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     addReturn: async (r) => {
       const prefix = r.type === "Sale" ? "SR" : "PR";
-      const number = `${prefix}-${1000 + state.returns.filter((x) => x.type === r.type).length + 1}`;
+      const maxNum = state.returns
+        .filter((x) => x.type === r.type)
+        .reduce((max, ret) => {
+          const regex = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+          const match = ret.number?.match(regex);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            return num > max ? num : max;
+          }
+          return max;
+        }, 1000);
+      const number = `${prefix}-${maxNum + 1}`;
       const { error } = await supabase.from("returns").insert([returnToDb(r, number)]);
       if (error) throw new Error(error.message);
       await refreshData();
@@ -1386,9 +1413,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const from = state.paymentAccounts.find((a) => a.id === t.fromAccountId);
       const to = state.paymentAccounts.find((a) => a.id === t.toAccountId);
       if (!from || !to) throw new Error("Select valid accounts");
-      const referenceNumber =
-        t.referenceNumber ||
-        `TRF-${new Date().getFullYear()}-${1000 + state.accountTransfers.length + 1}`;
+      const year = new Date().getFullYear();
+      const maxNum = state.accountTransfers.reduce((max, transfer) => {
+        const regex = new RegExp(`^TRF-${year}-(\\d+)$`, 'i');
+        const match = transfer.referenceNumber?.match(regex);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          return num > max ? num : max;
+        }
+        return max;
+      }, 1000);
+      const referenceNumber = t.referenceNumber || `TRF-${year}-${maxNum + 1}`;
       const payload = {
         ...t,
         referenceNumber,

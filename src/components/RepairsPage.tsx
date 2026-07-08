@@ -8,7 +8,23 @@ import { supabase } from "@/lib/supabase";
 import { ImageLightbox } from "./ImageLightbox";
 import { useNavigate } from "@tanstack/react-router";
 
-const defaultIssues = ["Screen Broken", "Battery Issue", "Charging Problem", "Water Damage"];
+const defaultIssues = [
+  "Screen Broken",
+  "Battery Issue",
+  "Charging Problem",
+  "Water Damage",
+  "Phone Not Turning On",
+  "Touchscreen Not Working",
+  "Camera Issue",
+  "Speaker Issue",
+  "Microphone Issue",
+  "Overheating",
+  "Network / SIM Issue",
+  "Software Issue",
+  "Back Glass Broken",
+  "Button Issue",
+  "Other"
+];
 
 type DraftItem = RepairItem & { draftIssue: string; newFiles?: File[] };
 type RepairFormData = {

@@ -924,11 +924,23 @@ function IssuePicker({
     });
   };
 
+  const allIssues = useMemo(() => {
+    const set = new Set(defaultIssues);
+    if (item.issues) {
+      item.issues.forEach((issue) => {
+        if (issue && issue.trim()) {
+          set.add(issue.trim());
+        }
+      });
+    }
+    return Array.from(set);
+  }, [item.issues]);
+
   return (
     <div className="grid gap-1.5">
-      <span className="text-xs uppercase tracking-wider text-muted-foreground">Issues *</span>
+      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Issues *</span>
       <div className="flex flex-wrap gap-2">
-        {defaultIssues.map((issue) => (
+        {allIssues.map((issue) => (
           <button
             type="button"
             key={issue}

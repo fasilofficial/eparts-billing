@@ -68,6 +68,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [customerFilter, setCustomerFilter] = useState("all");
+  const [modelFilter, setModelFilter] = useState("all");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
   const [expectedFrom, setExpectedFrom] = useState("");
@@ -87,6 +88,22 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
     setEditing(null);
   };
 
+  const uniqueModels = useMemo(() => {
+    const modelsSet = new Set<string>();
+    repairs.forEach((repair) => {
+      if (!isAdmin && repair.branchId !== session?.branchId) return;
+      if (isAdmin && branchFilter !== "all" && repair.branchId !== branchFilter) return;
+
+      repair.items.forEach((item) => {
+        const fullName = `${item.brand} ${item.item}`.trim();
+        if (fullName) {
+          modelsSet.add(fullName);
+        }
+      });
+    });
+    return Array.from(modelsSet).sort((a, b) => a.localeCompare(b));
+  }, [repairs, isAdmin, branchFilter, session?.branchId]);
+
   const scopedRepairs = useMemo(
     () =>
       repairs.filter((repair) => {
@@ -94,6 +111,14 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
         if (isAdmin && branchFilter !== "all" && repair.branchId !== branchFilter) return false;
         if (statusFilter !== "all" && repair.status !== statusFilter) return false;
         if (customerFilter !== "all" && repair.customerName !== customerFilter) return false;
+
+        if (modelFilter !== "all") {
+          const hasModelMatch = repair.items.some((item) => {
+            const fullName = `${item.brand} ${item.item}`.trim();
+            return fullName === modelFilter;
+          });
+          if (!hasModelMatch) return false;
+        }
 
         if (createdFrom) {
           const t = new Date(repair.entryDate || repair.createdAt).getTime();
@@ -130,6 +155,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
       session?.branchId,
       statusFilter,
       customerFilter,
+      modelFilter,
       createdFrom,
       createdTo,
       expectedFrom,
@@ -181,6 +207,18 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
             ))}
           </select>
         )}
+        <select
+          value={modelFilter}
+          onChange={(e) => setModelFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All models</option>
+          {uniqueModels.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={() => setFilterOpen(true)}
@@ -190,6 +228,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           Filter
           {(statusFilter !== "all" ||
             customerFilter !== "all" ||
+            modelFilter !== "all" ||
             createdFrom ||
             createdTo ||
             expectedFrom ||
@@ -388,6 +427,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
         <FilterModal
           status={statusFilter}
           customer={customerFilter}
+          model={modelFilter}
           createdFrom={createdFrom}
           createdTo={createdTo}
           expectedFrom={expectedFrom}
@@ -397,8 +437,10 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
             if (isAdmin && branchFilter !== "all" && c.branchId !== branchFilter) return false;
             return true;
           })}
+          models={uniqueModels}
           onStatus={setStatusFilter}
           onCustomer={setCustomerFilter}
+          onModel={setModelFilter}
           onCreatedFrom={setCreatedFrom}
           onCreatedTo={setCreatedTo}
           onExpectedFrom={setExpectedFrom}
@@ -407,6 +449,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           onClear={() => {
             setStatusFilter("all");
             setCustomerFilter("all");
+            setModelFilter("all");
             setCreatedFrom("");
             setCreatedTo("");
             setExpectedFrom("");
@@ -1027,13 +1070,16 @@ function Field({
 function FilterModal({
   status,
   customer,
+  model,
   createdFrom,
   createdTo,
   expectedFrom,
   expectedTo,
   customers,
+  models,
   onStatus,
   onCustomer,
+  onModel,
   onCreatedFrom,
   onCreatedTo,
   onExpectedFrom,
@@ -1043,13 +1089,16 @@ function FilterModal({
 }: {
   status: string;
   customer: string;
+  model: string;
   createdFrom: string;
   createdTo: string;
   expectedFrom: string;
   expectedTo: string;
   customers: { id: string; name: string }[];
+  models: string[];
   onStatus: (v: string) => void;
   onCustomer: (v: string) => void;
+  onModel: (v: string) => void;
   onCreatedFrom: (v: string) => void;
   onCreatedTo: (v: string) => void;
   onExpectedFrom: (v: string) => void;
@@ -1108,6 +1157,24 @@ function FilterModal({
               {customers.map((c) => (
                 <option key={c.id} value={c.name}>
                   {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Phone Model
+            </span>
+            <select
+              value={model}
+              onChange={(e) => onModel(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink font-semibold"
+            >
+              <option value="all">All models</option>
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
                 </option>
               ))}
             </select>

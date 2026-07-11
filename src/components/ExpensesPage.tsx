@@ -45,6 +45,10 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Expense | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
     photos: string[];
@@ -56,11 +60,22 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
       expenses.filter((expense) => {
         if (!isAdmin && expense.branchId !== session?.branchId) return false;
         if (isAdmin && branchFilter !== "all" && expense.branchId !== branchFilter) return false;
-        return `${expense.description} ${expense.expenseNumber}`
+        
+        // Date range filter
+        if (startDate && expense.date < startDate) return false;
+        if (endDate && expense.date > endDate) return false;
+
+        // Category filter
+        if (categoryFilter !== "all" && expense.category !== categoryFilter) return false;
+
+        // Status filter
+        if (statusFilter !== "all" && expense.status !== statusFilter) return false;
+
+        return `${expense.description} ${expense.expenseNumber} ${expense.category}`
           .toLowerCase()
           .includes(query.toLowerCase());
       }),
-    [branchFilter, expenses, isAdmin, query, session?.branchId],
+    [branchFilter, expenses, isAdmin, query, session?.branchId, startDate, endDate, categoryFilter, statusFilter],
   );
 
   const now = new Date();
@@ -105,7 +120,7 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
         <Stat label="Recurring" value={String(stats.recurring)} color="text-purple-600" />
       </div>
 
-      <div className="mb-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <input
           placeholder="Search description or reference..."
           value={query}
@@ -126,6 +141,70 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
             ))}
           </select>
         )}
+
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All Categories</option>
+          {expenseCategories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All Status</option>
+          <option value="Paid">Paid</option>
+          <option value="Unpaid">Unpaid</option>
+        </select>
+
+        {/* Unified Date Range Capsule */}
+        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-soft focus-within:border-ink transition-colors">
+          <span className="text-xs text-muted-foreground">Date:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="border-0 bg-transparent p-0 text-xs text-foreground outline-none [color-scheme:light] w-[115px] focus:ring-0"
+          />
+          <span className="text-xs text-muted-foreground/60">to</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="border-0 bg-transparent p-0 text-xs text-foreground outline-none [color-scheme:light] w-[115px] focus:ring-0"
+          />
+        </div>
+
+        {(query ||
+          branchFilter !== (isAdmin ? "all" : defaultBranchId) ||
+          startDate ||
+          endDate ||
+          categoryFilter !== "all" ||
+          statusFilter !== "all") && (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setBranchFilter(isAdmin ? "all" : defaultBranchId);
+              setStartDate("");
+              setEndDate("");
+              setCategoryFilter("all");
+              setStatusFilter("all");
+            }}
+            className="rounded-md border border-border bg-card px-3.5 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition cursor-pointer"
+          >
+            Reset
+          </button>
+        )}
+
         <div className="text-xs text-muted-foreground sm:ml-auto">{scoped.length} expenses</div>
       </div>
 

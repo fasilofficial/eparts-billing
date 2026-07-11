@@ -822,14 +822,24 @@ function ComboSelect({
   onSelect: (value: string) => void;
   options: { id: string; label: string }[];
 }) {
-  const id = `${label}-options`;
+  const [isOpen, setIsOpen] = useState(false);
+  const filtered = useMemo(() => {
+    return options.filter((option) =>
+      option.label.toLowerCase().includes((value || "").toLowerCase())
+    );
+  }, [options, value]);
+
   return (
-    <label className="grid gap-1.5">
+    <div className="relative grid gap-1.5 text-left">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       <input
         required
-        list={id}
         value={value}
+        autoComplete="off"
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => {
+          setTimeout(() => setIsOpen(false), 200);
+        }}
         onChange={(e) => {
           const match = options.find((o) => o.label === e.target.value);
           onSelect(match?.id ?? "");
@@ -837,15 +847,28 @@ function ComboSelect({
         }}
         className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
       />
-      <datalist id={id}>
-        {options.map((option) => (
-          <option key={option.id} value={option.label} />
-        ))}
-      </datalist>
+      {isOpen && filtered.length > 0 && (
+        <div className="absolute left-0 right-0 top-[100%] z-50 mt-1 max-h-60 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-md">
+          {filtered.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onMouseDown={() => {
+                onSelect(option.id);
+                onText(option.label);
+                setIsOpen(false);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground outline-none transition-colors"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
       {selected && (
         <span className="text-xs text-muted-foreground">Existing supplier selected</span>
       )}
-    </label>
+    </div>
   );
 }
 function Field({

@@ -12,7 +12,24 @@ const units = ["Pieces", "Hours", "Days", "Kg", "Meter", "Box"];
 const taxes = ["No Tax", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 
 export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, products, addProduct, updateProduct, deleteProduct } = useStore();
+  const {
+    session,
+    branches,
+    products,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    categories: dbCategories,
+  } = useStore();
+
+  const productCategories = useMemo(() => {
+    const fromProducts = products.map((p) => p.category).filter(Boolean) as string[];
+    const fromDb = dbCategories
+      .filter((c) => c.type === "Product" && c.isActive)
+      .map((c) => c.name);
+    return Array.from(new Set([...fromProducts, ...fromDb]));
+  }, [products, dbCategories]);
+
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
   const defaultBranchId = isAdmin
@@ -263,6 +280,7 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
           defaultBranchId={defaultBranchId}
           initial={editing}
           allProducts={products}
+          categories={productCategories}
           onClose={closeDialog}
           onSave={async (data) => {
             try {
@@ -299,6 +317,7 @@ function ProductDialog({
   defaultBranchId,
   initial,
   allProducts,
+  categories,
   onClose,
   onSave,
 }: {
@@ -307,6 +326,7 @@ function ProductDialog({
   defaultBranchId: string;
   initial: Product | null;
   allProducts: Product[];
+  categories: string[];
   onClose: () => void;
   onSave: (data: Omit<Product, "id">) => void;
 }) {
@@ -334,9 +354,6 @@ function ProductDialog({
     initial?.trackBySerialNumbers ?? false,
   );
 
-  const categories = Array.from(
-    new Set(allProducts.map((p) => p.category).filter(Boolean)),
-  ) as string[];
   const brands = Array.from(new Set(allProducts.map((p) => p.brand).filter(Boolean))) as string[];
 
   const submit = async (e: FormEvent) => {
@@ -697,23 +714,45 @@ function ComboField({
   options: string[];
   placeholder: string;
 }) {
-  const id = `${label.toLowerCase()}-options`;
+  const [isOpen, setIsOpen] = useState(false);
+  const filtered = useMemo(() => {
+    return options.filter((option) =>
+      option.toLowerCase().includes((value || "").toLowerCase())
+    );
+  }, [options, value]);
+
   return (
-    <label className="grid gap-1.5">
+    <div className="relative grid gap-1.5 text-left">
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
       <input
-        list={id}
         value={value}
+        autoComplete="off"
         placeholder={placeholder}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => {
+          setTimeout(() => setIsOpen(false), 200);
+        }}
         onChange={(e) => onChange(e.target.value)}
         className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink"
       />
-      <datalist id={id}>
-        {options.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
-    </label>
+      {isOpen && filtered.length > 0 && (
+        <div className="absolute left-0 right-0 top-[100%] z-50 mt-1 max-h-60 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-md">
+          {filtered.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onMouseDown={() => {
+                onChange(option);
+                setIsOpen(false);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground outline-none transition-colors"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

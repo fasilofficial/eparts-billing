@@ -23,7 +23,7 @@ const defaultIssues = [
   "Software Issue",
   "Back Glass Broken",
   "Button Issue",
-  "Other"
+  "Other",
 ];
 
 type DraftItem = RepairItem & { draftIssue: string; newFiles?: File[] };
@@ -53,7 +53,7 @@ const emptyItem = (): DraftItem => ({
 });
 
 export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, customers, repairs, addRepair, updateRepair, deleteRepair } =
+  const { session, branches, customers, repairs, addRepair, updateRepair, deleteRepair, staff } =
     useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
@@ -69,10 +69,14 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [customerFilter, setCustomerFilter] = useState("all");
   const [modelFilter, setModelFilter] = useState("all");
+  const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const [datePeriod, setDatePeriod] = useState("all");
   const [createdFrom, setCreatedFrom] = useState("");
   const [createdTo, setCreatedTo] = useState("");
   const [expectedFrom, setExpectedFrom] = useState("");
   const [expectedTo, setExpectedTo] = useState("");
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
     photos: string[];
@@ -86,6 +90,54 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
   const closeDialog = () => {
     setOpen(false);
     setEditing(null);
+  };
+
+  const activeStaff = useMemo(() => {
+    return staff.filter((s) => {
+      if (!isAdmin && s.branchId !== session?.branchId) return false;
+      if (isAdmin && branchFilter !== "all" && s.branchId !== branchFilter) return false;
+      return s.status === "Active";
+    });
+  }, [staff, isAdmin, branchFilter, session?.branchId]);
+
+  const getPeriodDates = (period: string) => {
+    const now = new Date();
+    const format = (d: Date) => d.toLocaleDateString("sv-SE");
+    switch (period) {
+      case "today":
+        return { from: format(now), to: format(now) };
+      case "week": {
+        const start = new Date(now);
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+        start.setDate(diff);
+        return { from: format(start), to: format(now) };
+      }
+      case "month": {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { from: format(start), to: format(now) };
+      }
+      case "year": {
+        const start = new Date(now.getFullYear(), 0, 1);
+        return { from: format(start), to: format(now) };
+      }
+      default:
+        return { from: "", to: "" };
+    }
+  };
+
+  const applyDatePeriod = (period: string) => {
+    setDatePeriod(period);
+    if (period === "all") {
+      setCreatedFrom("");
+      setCreatedTo("");
+    } else if (period === "custom") {
+      // Keep existing custom dates, or keep empty
+    } else {
+      const { from, to } = getPeriodDates(period);
+      setCreatedFrom(from);
+      setCreatedTo(to);
+    }
   };
 
   const uniqueModels = useMemo(() => {
@@ -120,6 +172,16 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           if (!hasModelMatch) return false;
         }
 
+        if (assigneeFilter !== "all") {
+          const hasAssigneeMatch = repair.items.some((item) => {
+            if (assigneeFilter === "Unassigned") {
+              return !item.assignedTo || item.assignedTo === "Unassigned";
+            }
+            return item.assignedToId === assigneeFilter || item.assignedTo === assigneeFilter;
+          });
+          if (!hasAssigneeMatch) return false;
+        }
+
         if (createdFrom) {
           const t = new Date(repair.entryDate || repair.createdAt).getTime();
           if (t < new Date(createdFrom).getTime()) return false;
@@ -140,6 +202,10 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           if (!hasExpectedCompletionMatch) return false;
         }
 
+        const estimate = repair.items.reduce((sum, item) => sum + (item.estimatedCost || 0), 0);
+        if (amountMin && estimate < Number(amountMin)) return false;
+        if (amountMax && estimate > Number(amountMax)) return false;
+
         const itemText = repair.items
           .map((item) => `${item.brand} ${item.item} ${item.serialNumber ?? ""}`)
           .join(" ");
@@ -156,10 +222,13 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
       statusFilter,
       customerFilter,
       modelFilter,
+      assigneeFilter,
       createdFrom,
       createdTo,
       expectedFrom,
       expectedTo,
+      amountMin,
+      amountMax,
     ],
   );
 
@@ -196,6 +265,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
             onChange={(e) => {
               setBranchFilter(e.target.value);
               setCustomerFilter("all");
+              setAssigneeFilter("all");
             }}
             className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
           >
@@ -206,6 +276,48 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
               </option>
             ))}
           </select>
+        )}
+        <select
+          value={assigneeFilter}
+          onChange={(e) => setAssigneeFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All assignees</option>
+          <option value="Unassigned">Unassigned</option>
+          {activeStaff.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={datePeriod}
+          onChange={(e) => applyDatePeriod(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="year">This Year</option>
+          <option value="custom">Custom Range</option>
+        </select>
+        {datePeriod === "custom" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={createdFrom}
+              onChange={(e) => setCreatedFrom(e.target.value)}
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+            />
+            <span className="text-muted-foreground text-xs">to</span>
+            <input
+              type="date"
+              value={createdTo}
+              onChange={(e) => setCreatedTo(e.target.value)}
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+            />
+          </div>
         )}
         <select
           value={modelFilter}
@@ -229,10 +341,13 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           {(statusFilter !== "all" ||
             customerFilter !== "all" ||
             modelFilter !== "all" ||
+            assigneeFilter !== "all" ||
             createdFrom ||
             createdTo ||
             expectedFrom ||
-            expectedTo) && <span className="ml-1 flex size-2 rounded-full bg-ink animate-pulse" />}
+            expectedTo ||
+            amountMin ||
+            amountMax) && <span className="ml-1 flex size-2 rounded-full bg-ink animate-pulse" />}
         </button>
         <div className="text-xs text-muted-foreground sm:ml-auto">
           {scopedRepairs.length} repairs
@@ -428,32 +543,51 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           status={statusFilter}
           customer={customerFilter}
           model={modelFilter}
+          assignee={assigneeFilter}
+          datePeriod={datePeriod}
           createdFrom={createdFrom}
           createdTo={createdTo}
           expectedFrom={expectedFrom}
           expectedTo={expectedTo}
+          amountMin={amountMin}
+          amountMax={amountMax}
           customers={customers.filter((c) => {
             if (!isAdmin && c.branchId !== session?.branchId) return false;
             if (isAdmin && branchFilter !== "all" && c.branchId !== branchFilter) return false;
             return true;
           })}
           models={uniqueModels}
+          activeStaff={activeStaff}
           onStatus={setStatusFilter}
           onCustomer={setCustomerFilter}
           onModel={setModelFilter}
-          onCreatedFrom={setCreatedFrom}
-          onCreatedTo={setCreatedTo}
+          onAssignee={setAssigneeFilter}
+          applyDatePeriod={applyDatePeriod}
+          onCreatedFrom={(v) => {
+            setCreatedFrom(v);
+            setDatePeriod("custom");
+          }}
+          onCreatedTo={(v) => {
+            setCreatedTo(v);
+            setDatePeriod("custom");
+          }}
           onExpectedFrom={setExpectedFrom}
           onExpectedTo={setExpectedTo}
+          onAmountMin={setAmountMin}
+          onAmountMax={setAmountMax}
           onClose={() => setFilterOpen(false)}
           onClear={() => {
             setStatusFilter("all");
             setCustomerFilter("all");
             setModelFilter("all");
+            setAssigneeFilter("all");
+            setDatePeriod("all");
             setCreatedFrom("");
             setCreatedTo("");
             setExpectedFrom("");
             setExpectedTo("");
+            setAmountMin("");
+            setAmountMax("");
           }}
         />
       )}
@@ -486,7 +620,7 @@ function RepairDialog({
   const [entryDate, setEntryDate] = useState(
     initial?.entryDate
       ? new Date(initial.entryDate).toLocaleDateString("sv-SE")
-      : new Date().toLocaleDateString("sv-SE")
+      : new Date().toLocaleDateString("sv-SE"),
   );
   const [items, setItems] = useState<DraftItem[]>(
     initial?.items.length
@@ -690,7 +824,9 @@ function RepairDialog({
               )}
             </label>
             <label className="grid gap-1.5">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Status</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Status
+              </span>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -997,7 +1133,9 @@ function IssuePicker({
 
   return (
     <div className="grid gap-1.5">
-      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Issues *</span>
+      <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+        Issues *
+      </span>
       <div className="flex flex-wrap gap-2">
         {allIssues.map((issue) => (
           <button
@@ -1071,38 +1209,56 @@ function FilterModal({
   status,
   customer,
   model,
+  assignee,
+  datePeriod,
   createdFrom,
   createdTo,
   expectedFrom,
   expectedTo,
+  amountMin,
+  amountMax,
   customers,
   models,
+  activeStaff,
   onStatus,
   onCustomer,
   onModel,
+  onAssignee,
+  applyDatePeriod,
   onCreatedFrom,
   onCreatedTo,
   onExpectedFrom,
   onExpectedTo,
+  onAmountMin,
+  onAmountMax,
   onClose,
   onClear,
 }: {
   status: string;
   customer: string;
   model: string;
+  assignee: string;
+  datePeriod: string;
   createdFrom: string;
   createdTo: string;
   expectedFrom: string;
   expectedTo: string;
+  amountMin: string;
+  amountMax: string;
   customers: { id: string; name: string }[];
   models: string[];
+  activeStaff: { id: string; name: string }[];
   onStatus: (v: string) => void;
   onCustomer: (v: string) => void;
   onModel: (v: string) => void;
+  onAssignee: (v: string) => void;
+  applyDatePeriod: (v: string) => void;
   onCreatedFrom: (v: string) => void;
   onCreatedTo: (v: string) => void;
   onExpectedFrom: (v: string) => void;
   onExpectedTo: (v: string) => void;
+  onAmountMin: (v: string) => void;
+  onAmountMax: (v: string) => void;
   onClose: () => void;
   onClear: () => void;
 }) {
@@ -1180,6 +1336,53 @@ function FilterModal({
             </select>
           </label>
 
+          <label className="grid gap-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Assignee
+            </span>
+            <select
+              value={assignee}
+              onChange={(e) => onAssignee(e.target.value)}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink font-semibold"
+            >
+              <option value="all">All assignees</option>
+              <option value="Unassigned">Unassigned</option>
+              {activeStaff.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid gap-1.5">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+              Quick Date Range
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "all", label: "All Time" },
+                { value: "today", label: "Today" },
+                { value: "week", label: "This Week" },
+                { value: "month", label: "This Month" },
+                { value: "year", label: "This Year" },
+              ].map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => applyDatePeriod(p.value)}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                    datePeriod === p.value
+                      ? "border-ink bg-ink text-paper"
+                      : "border-border text-muted-foreground hover:bg-accent cursor-pointer"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1.5 font-sans">
               <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
@@ -1225,6 +1428,35 @@ function FilterModal({
                 type="date"
                 value={expectedTo}
                 onChange={(e) => onExpectedTo(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full font-semibold"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Min Estimate
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Min amount"
+                value={amountMin}
+                onChange={(e) => onAmountMin(e.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full font-semibold"
+              />
+            </label>
+            <label className="grid gap-1.5 font-sans">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Max Estimate
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Max amount"
+                value={amountMax}
+                onChange={(e) => onAmountMax(e.target.value)}
                 className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ink w-full font-semibold"
               />
             </label>

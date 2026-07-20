@@ -112,7 +112,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
       productId: `repair-item-${item.id ?? idx}`,
       name: `${item.brand} ${item.item} – Repair Service`,
       sku: undefined,
-      price: item.serviceCost ?? item.estimatedCost ?? 0,
+      price: item.serviceCost ?? 0,
       qty: item.quantity || 1,
       taxPercent: 0,
       discountType: "%" as const,

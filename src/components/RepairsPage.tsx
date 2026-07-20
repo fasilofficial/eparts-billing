@@ -45,7 +45,7 @@ const emptyItem = (): DraftItem => ({
   issueDescription: "",
   photos: [],
   underWarranty: false,
-  estimatedCost: undefined,
+  partsCost: undefined,
   serviceCost: undefined,
   assignedTo: "Unassigned",
   expectedCompletionDate: "",
@@ -202,9 +202,9 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           if (!hasExpectedCompletionMatch) return false;
         }
 
-        const estimate = repair.items.reduce((sum, item) => sum + (item.estimatedCost || 0), 0);
-        if (amountMin && estimate < Number(amountMin)) return false;
-        if (amountMax && estimate > Number(amountMax)) return false;
+        const totalAmount = repair.items.reduce((sum, item) => sum + (item.serviceCost || 0), 0);
+        if (amountMin && totalAmount < Number(amountMin)) return false;
+        if (amountMax && totalAmount > Number(amountMax)) return false;
 
         const itemText = repair.items
           .map((item) => `${item.brand} ${item.item} ${item.serialNumber ?? ""}`)
@@ -357,7 +357,9 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
       <div className="grid gap-3">
         {scopedRepairs.map((repair) => {
           const branch = branches.find((b) => b.id === repair.branchId);
-          const estimate = repair.items.reduce((sum, item) => sum + (item.estimatedCost || 0), 0);
+          const totalAmount = repair.items.reduce((sum, item) => sum + (item.serviceCost || 0), 0);
+          const totalPartsCost = repair.items.reduce((sum, item) => sum + (item.partsCost || 0), 0);
+          const totalProfit = totalAmount - totalPartsCost;
           return (
             <article
               key={repair.id}
@@ -377,11 +379,27 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                   </div>
                 </div>
                 <div className="flex shrink-0 items-start justify-between gap-3 sm:block sm:text-right">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Estimate
+                  <div className="space-y-1 sm:space-y-1.5">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Total Amount
+                      </div>
+                      <div className="num text-lg font-bold text-foreground">{fmtMoney(totalAmount)}</div>
                     </div>
-                    <div className="num text-lg">{fmtMoney(estimate)}</div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Parts Cost
+                      </div>
+                      <div className="num text-xs font-semibold text-muted-foreground">{fmtMoney(totalPartsCost)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Profit
+                      </div>
+                      <div className={`num text-sm font-bold ${totalProfit >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                        {fmtMoney(totalProfit)}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex gap-1 sm:mt-3 sm:justify-end">
                     <button
@@ -707,7 +725,7 @@ function RepairDialog({
             brand: item.brand.trim(),
             item: item.item.trim(),
             quantity: Number(item.quantity) || 1,
-            estimatedCost: item.estimatedCost == null ? undefined : Number(item.estimatedCost),
+            partsCost: item.partsCost == null ? undefined : Number(item.partsCost),
             serviceCost: item.serviceCost == null ? undefined : Number(item.serviceCost),
             issues: item.issues.filter(Boolean),
             photos,
@@ -894,16 +912,16 @@ function RepairDialog({
                     onChange={(value) => updateItem(index, { serialNumber: value })}
                   />
                   <Field
-                    label="Estimated cost"
+                    label="Cost of parts"
                     type="number"
                     step="0.01"
-                    value={String(item.estimatedCost ?? "")}
+                    value={String(item.partsCost ?? "")}
                     onChange={(value) =>
-                      updateItem(index, { estimatedCost: value === "" ? undefined : Number(value) })
+                      updateItem(index, { partsCost: value === "" ? undefined : Number(value) })
                     }
                   />
                   <Field
-                    label="Service cost"
+                    label="Total amount"
                     type="number"
                     step="0.01"
                     value={String(item.serviceCost ?? "")}
@@ -1436,7 +1454,7 @@ function FilterModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1.5 font-sans">
               <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Min Estimate
+                Min Amount
               </span>
               <input
                 type="number"
@@ -1449,7 +1467,7 @@ function FilterModal({
             </label>
             <label className="grid gap-1.5 font-sans">
               <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-                Max Estimate
+                Max Amount
               </span>
               <input
                 type="number"

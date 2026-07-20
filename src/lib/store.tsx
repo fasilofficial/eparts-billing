@@ -252,7 +252,7 @@ export interface RepairItem {
   issueDescription?: string;
   photos: string[];
   underWarranty: boolean;
-  estimatedCost?: number;
+  partsCost?: number;
   serviceCost?: number;
   assignedTo: string;
   assignedToId?: string;
@@ -412,7 +412,7 @@ const repairItemsToDb = (repairId: string, items: RepairItem[]) =>
     issue_description: item.issueDescription || null,
     photos: item.photos,
     under_warranty: item.underWarranty,
-    estimated_cost: item.estimatedCost ?? null,
+    parts_cost: item.partsCost ?? 0,
     service_cost: item.serviceCost ?? null,
     assigned_to: item.assignedTo || "Unassigned",
     assigned_to_id: item.assignedToId || null,
@@ -715,7 +715,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           issueDescription: i.issue_description ?? undefined,
           photos: i.photos ?? [],
           underWarranty: Boolean(i.under_warranty),
-          estimatedCost: i.estimated_cost == null ? undefined : Number(i.estimated_cost),
+          partsCost: i.parts_cost == null ? undefined : Number(i.parts_cost),
           serviceCost: i.service_cost == null ? undefined : Number(i.service_cost),
           assignedTo: i.assigned_to ?? "Unassigned",
           assignedToId: i.assigned_to_id ?? undefined,

@@ -75,7 +75,14 @@ export function InvoiceDocument({ bill, branch }: { bill: Bill; branch?: Branch 
             <tbody>
               {bill.items.map((it, i) => (
                 <tr key={i} className="border-b border-neutral-100">
-                  <td className="py-3">{it.name}</td>
+                  <td className="py-3">
+                    <div className="font-medium text-neutral-800">{it.name}</div>
+                    {it.warranty && (
+                      <div className="text-[10px] text-neutral-500 font-medium italic mt-0.5">
+                        Warranty/Guarantee: {it.warranty}
+                      </div>
+                    )}
+                  </td>
                   <td className="py-3 text-right num">{it.qty}</td>
                   <td className="py-3 text-right num">{fmtMoney(it.price)}</td>
                   <td className="py-3 text-right num">{fmtMoney(it.price * it.qty)}</td>

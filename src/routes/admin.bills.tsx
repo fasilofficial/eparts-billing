@@ -16,6 +16,7 @@ interface EditItem {
   name: string;
   price: number;
   qty: number;
+  warranty?: string;
 }
 
 function billToEditItems(bill: Bill): EditItem[] {
@@ -24,6 +25,7 @@ function billToEditItems(bill: Bill): EditItem[] {
     name: i.name,
     price: i.price,
     qty: i.qty,
+    warranty: i.warranty ?? "",
   }));
 }
 
@@ -57,7 +59,7 @@ function EditBillModal({
   const addRow = () =>
     setItems((prev) => [
       ...prev,
-      { productId: `manual-${Date.now()}`, name: "", price: 0, qty: 1 },
+      { productId: `manual-${Date.now()}`, name: "", price: 0, qty: 1, warranty: "" },
     ]);
 
   const handleSave = async () => {
@@ -189,8 +191,15 @@ function EditBillModal({
                         <input
                           value={item.name}
                           onChange={(e) => setItemField(idx, "name", e.target.value)}
-                          className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-sm focus:border-border focus:bg-background outline-none"
+                          className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold focus:border-border focus:bg-background outline-none"
                           placeholder="Item name"
+                        />
+                        <input
+                          value={item.warranty || ""}
+                          list="warranty-options"
+                          onChange={(e) => setItemField(idx, "warranty", e.target.value)}
+                          className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-[10px] text-muted-foreground placeholder:text-muted-foreground outline-none focus:border-border focus:bg-background italic mt-0.5"
+                          placeholder="Warranty / Guarantee (optional)"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -307,6 +316,15 @@ function EditBillModal({
           </div>
         </div>
       </div>
+      <datalist id="warranty-options">
+        <option value="No Warranty" />
+        <option value="3 Months Warranty" />
+        <option value="6 Months Warranty" />
+        <option value="1 Year Warranty" />
+        <option value="2 Years Warranty" />
+        <option value="6 Months Guarantee" />
+        <option value="1 Year Guarantee" />
+      </datalist>
     </div>
   );
 }

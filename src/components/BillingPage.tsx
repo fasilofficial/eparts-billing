@@ -31,6 +31,7 @@ interface ExtendedBillItem {
   taxPercent: number;
   discountType: "%" | "₹";
   discountValue: number;
+  warranty?: string;
 }
 
 const todayFormatted = () => {
@@ -116,6 +117,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
       taxPercent: 0,
       discountType: "%" as const,
       discountValue: 0,
+      warranty: item.underWarranty ? "Under Warranty" : "",
     }));
     setItems(repairLineItems);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,6 +222,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
           taxPercent: 0,
           discountType: "%",
           discountValue: 0,
+          warranty: "",
         },
       ];
     });
@@ -276,6 +279,7 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
           name: it.name,
           price: it.price,
           qty: it.qty,
+          warranty: it.warranty || undefined,
         })),
       });
 
@@ -564,13 +568,25 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
                           <div className="grid size-8 place-items-center rounded bg-accent/50 text-muted-foreground shrink-0">
                             <ShoppingCart className="size-4" />
                           </div>
-                          <div>
-                            <div className="font-bold text-foreground">{item.name}</div>
+                          <div className="w-full min-w-0">
+                            <div className="font-bold text-foreground truncate">{item.name}</div>
                             {item.sku && (
                               <div className="text-[10px] text-muted-foreground">
                                 SKU: {item.sku}
                               </div>
                             )}
+                            <div className="mt-1">
+                              <input
+                                type="text"
+                                list="warranty-options"
+                                placeholder="Warranty / Guarantee info"
+                                value={item.warranty || ""}
+                                onChange={(e) =>
+                                  setItemProperty(item.productId, "warranty", e.target.value)
+                                }
+                                className="w-full max-w-[200px] rounded border border-border bg-background px-2 py-0.5 text-[10px] text-foreground placeholder:text-muted-foreground outline-none focus:border-ink placeholder:italic focus:bg-background/80"
+                              />
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1139,6 +1155,15 @@ export function BillingPage({ mode }: { mode: "admin" | "branch" }) {
           </div>
         </div>
       )}
+      <datalist id="warranty-options">
+        <option value="No Warranty" />
+        <option value="3 Months Warranty" />
+        <option value="6 Months Warranty" />
+        <option value="1 Year Warranty" />
+        <option value="2 Years Warranty" />
+        <option value="6 Months Guarantee" />
+        <option value="1 Year Guarantee" />
+      </datalist>
     </>
   );
 }

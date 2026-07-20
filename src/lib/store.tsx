@@ -188,6 +188,7 @@ export interface BillItem {
   name: string;
   price: number;
   qty: number;
+  warranty?: string;
 }
 
 export interface Bill {
@@ -1056,6 +1057,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           name: item.name,
           price: item.price,
           qty: item.qty,
+          warranty: item.warranty || null,
         }));
         const { error: itemsError } = await supabase.from("bill_items").insert(billItems);
         if (itemsError) throw new Error(itemsError.message);
@@ -1122,6 +1124,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             name: item.name,
             price: item.price,
             qty: item.qty,
+            warranty: item.warranty || null,
           }));
           const { error: insErr } = await supabase.from("bill_items").insert(newItems);
           if (insErr) throw new Error(insErr.message);

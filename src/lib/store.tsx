@@ -401,23 +401,28 @@ const customerToDb = (c: Omit<Customer, "id" | "createdAt">) => {
   };
 };
 
-const repairItemsToDb = (repairId: string, items: RepairItem[]) =>
-  items.map((item) => ({
-    repair_id: repairId,
-    brand: item.brand,
-    item: item.item,
-    quantity: item.quantity || 1,
-    serial_number: item.serialNumber || null,
-    issues: item.issues,
-    issue_description: item.issueDescription || null,
-    photos: item.photos,
-    under_warranty: item.underWarranty,
-    parts_cost: item.partsCost ?? 0,
-    service_cost: item.serviceCost ?? null,
-    assigned_to: item.assignedTo || "Unassigned",
-    assigned_to_id: item.assignedToId || null,
-    expected_completion_date: item.expectedCompletionDate || null,
-  }));
+const repairItemsToDb = (repairId: string, items: RepairItem[], includePartsCost = true) =>
+  items.map((item) => {
+    const obj: any = {
+      repair_id: repairId,
+      brand: item.brand,
+      item: item.item,
+      quantity: item.quantity || 1,
+      serial_number: item.serialNumber || null,
+      issues: item.issues,
+      issue_description: item.issueDescription || null,
+      photos: item.photos,
+      under_warranty: item.underWarranty,
+      service_cost: item.serviceCost ?? null,
+      assigned_to: item.assignedTo || "Unassigned",
+      assigned_to_id: item.assignedToId || null,
+      expected_completion_date: item.expectedCompletionDate || null,
+    };
+    if (includePartsCost) {
+      obj.parts_cost = item.partsCost ?? 0;
+    }
+    return obj;
+  });
 
 const productToDb = (p: Partial<Product>) => {
   const {
@@ -1050,16 +1055,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
 
       if (newBill && items.length > 0) {
-        const billItems = items.map((item) => ({
-          bill_id: newBill.id,
-          // Repair-service items use a synthetic productId — store null for product_id
-          product_id: item.productId.startsWith("repair-item-") ? null : item.productId,
-          name: item.name,
-          price: item.price,
-          qty: item.qty,
-          warranty: item.warranty || null,
-        }));
-        const { error: itemsError } = await supabase.from("bill_items").insert(billItems);
+        const createItemObj = (item: typeof items[0], includeWarranty = true) => {
+          const obj: any = {
+            bill_id: newBill.id,
+            product_id: item.productId.startsWith("repair-item-") ? null : item.productId,
+            name: item.name,
+            price: item.price,
+            qty: item.qty,
+          };
+          if (includeWarranty && item.warranty) {
+            obj.warranty = item.warranty;
+          }
+          return obj;
+        };
+
+        let { error: itemsError } = await supabase
+          .from("bill_items")
+          .insert(items.map((it) => createItemObj(it, true)));
+
+        // Fallback if warranty column hasn't been added to remote Supabase schema yet
+        if (itemsError && itemsError.message?.includes("warranty")) {
+          const fallbackRes = await supabase
+            .from("bill_items")
+            .insert(items.map((it) => createItemObj(it, false)));
+          itemsError = fallbackRes.error;
+        }
+
         if (itemsError) throw new Error(itemsError.message);
 
         // Decrement stock only for real product items (not repair service lines)
@@ -1113,20 +1134,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { error: delErr } = await supabase.from("bill_items").delete().eq("bill_id", id);
         if (delErr) throw new Error(delErr.message);
         if (items.length > 0) {
-          const newItems = items.map((item: any) => ({
-            bill_id: id,
-            product_id:
-              !item.productId ||
-              item.productId.startsWith("repair-item-") ||
-              item.productId.startsWith("manual-")
-                ? null
-                : item.productId,
-            name: item.name,
-            price: item.price,
-            qty: item.qty,
-            warranty: item.warranty || null,
-          }));
-          const { error: insErr } = await supabase.from("bill_items").insert(newItems);
+          const createEditItemObj = (item: any, includeWarranty = true) => {
+            const obj: any = {
+              bill_id: id,
+              product_id:
+                !item.productId ||
+                item.productId.startsWith("repair-item-") ||
+                item.productId.startsWith("manual-")
+                  ? null
+                  : item.productId,
+              name: item.name,
+              price: item.price,
+              qty: item.qty,
+            };
+            if (includeWarranty && item.warranty) {
+              obj.warranty = item.warranty;
+            }
+            return obj;
+          };
+
+          let { error: insErr } = await supabase
+            .from("bill_items")
+            .insert(items.map((it: any) => createEditItemObj(it, true)));
+
+          if (insErr && insErr.message?.includes("warranty")) {
+            const fallbackRes = await supabase
+              .from("bill_items")
+              .insert(items.map((it: any) => createEditItemObj(it, false)));
+            insErr = fallbackRes.error;
+          }
+
           if (insErr) throw new Error(insErr.message);
         }
       }
@@ -1221,8 +1258,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
 
       if (repair && items.length > 0) {
-        const repairItems = repairItemsToDb(repair.id, items);
-        const { error: itemsError } = await supabase.from("repair_items").insert(repairItems);
+        let { error: itemsError } = await supabase
+          .from("repair_items")
+          .insert(repairItemsToDb(repair.id, items, true));
+
+        if (itemsError && itemsError.message?.includes("parts_cost")) {
+          const fallbackRes = await supabase
+            .from("repair_items")
+            .insert(repairItemsToDb(repair.id, items, false));
+          itemsError = fallbackRes.error;
+        }
+
         if (itemsError) throw new Error(itemsError.message);
       }
 
@@ -1260,9 +1306,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (deleteItemsError) throw new Error(deleteItemsError.message);
 
       if (items.length > 0) {
-        const { error: itemsError } = await supabase
+        let { error: itemsError } = await supabase
           .from("repair_items")
-          .insert(repairItemsToDb(id, items));
+          .insert(repairItemsToDb(id, items, true));
+
+        if (itemsError && itemsError.message?.includes("parts_cost")) {
+          const fallbackRes = await supabase
+            .from("repair_items")
+            .insert(repairItemsToDb(id, items, false));
+          itemsError = fallbackRes.error;
+        }
+
         if (itemsError) throw new Error(itemsError.message);
       }
 

@@ -8,6 +8,9 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { ImageLightbox } from "./ImageLightbox";
 import { supabase } from "@/lib/supabase";
 
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
+
 const units = ["Pieces", "Hours", "Days", "Kg", "Meter", "Box"];
 const taxes = ["No Tax", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 
@@ -19,6 +22,7 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
     addProduct,
     updateProduct,
     deleteProduct,
+    deleteProducts,
     categories: dbCategories,
   } = useStore();
 
@@ -44,6 +48,8 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
     photos: string[];
     currentIndex: number;
   }>({ isOpen: false, photos: [], currentIndex: 0 });
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   const scoped = useMemo(
     () =>
@@ -56,6 +62,48 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
       }),
     [branchFilter, isAdmin, products, query, session?.branchId],
   );
+
+  const scopedIds = useMemo(() => scoped.map((p) => p.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((p) => selectedIds.includes(p.id));
+  const isSomeSelected = scoped.some((p) => selectedIds.includes(p.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} product${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected item${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteProducts(selectedIds);
+      toast.success(`${count} product${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected products");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const stockProducts = scoped.filter((p) => (p.type ?? "Product") === "Product");
@@ -153,10 +201,28 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
         <div className="text-xs text-muted-foreground sm:ml-auto">{scoped.length} items</div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="products"
+        className="mb-4"
+      />
+
       <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
+              <th className="w-10 px-4 py-3 text-center">
+                <Checkbox
+                  checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all products"
+                />
+              </th>
               <th className="px-5 py-3 text-left font-medium">Product</th>
               <th className="px-5 py-3 text-left font-medium">SKU</th>
               {isAdmin && <th className="px-5 py-3 text-left font-medium">Branch</th>}
@@ -169,14 +235,24 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
           <tbody>
             {scoped.map((product) => {
               const branch = branches.find((b) => b.id === product.branchId);
+              const isSelected = selectedIds.includes(product.id);
               const low =
                 (product.type ?? "Product") === "Product" &&
                 product.stock <= (product.lowStockAlert ?? 10);
               return (
                 <tr
                   key={product.id}
-                  className="group border-b border-border/60 transition hover:bg-muted/50"
+                  className={`group border-b border-border/60 transition ${
+                    isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/50"
+                  }`}
                 >
+                  <td className="w-10 px-4 py-3 text-center">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(product.id)}
+                      aria-label={`Select ${product.name}`}
+                    />
+                  </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       {product.image && product.image.startsWith("http") ? (
@@ -245,6 +321,7 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
                           try {
                             await deleteProduct(product.id);
                             toast.success("Product deleted");
+                            setSelectedIds((prev) => prev.filter((id) => id !== product.id));
                           } catch (e: any) {
                             toast.error(e.message || "Failed to delete product");
                           }
@@ -262,7 +339,7 @@ export function ProductInventoryPage({ mode }: { mode: "admin" | "branch" }) {
             {scoped.length === 0 && (
               <tr>
                 <td
-                  colSpan={isAdmin ? 7 : 6}
+                  colSpan={isAdmin ? 8 : 7}
                   className="px-5 py-12 text-center text-muted-foreground"
                 >
                   No products or services found.

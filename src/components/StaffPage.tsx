@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { ImageLightbox } from "./ImageLightbox";
 import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 interface StaffFormData {
   branchId: string;
@@ -37,8 +39,17 @@ const emptyStaffForm = (defaultBranchId: string): StaffFormData => ({
 });
 
 export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, staff, repairs, addStaff, updateStaff, deleteStaff, updateRepair } =
-    useStore();
+  const {
+    session,
+    branches,
+    staff,
+    repairs,
+    addStaff,
+    updateStaff,
+    deleteStaff,
+    deleteStaffMembers,
+    updateRepair,
+  } = useStore();
   const confirm = useConfirm();
 
   const isAdmin = mode === "admin";
@@ -52,6 +63,8 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [staffFilter, setStaffFilter] = useState("all");
   const [expandedStaff, setExpandedStaff] = useState<Record<string, boolean>>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
     photos: string[];
@@ -113,6 +126,48 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     }
   };
 
+  const scopedIds = useMemo(() => filteredStaff.map((s) => s.id), [filteredStaff]);
+  const isAllSelected = filteredStaff.length > 0 && filteredStaff.every((s) => selectedIds.includes(s.id));
+  const isSomeSelected = filteredStaff.some((s) => selectedIds.includes(s.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} staff member${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected staff member${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteStaffMembers(selectedIds);
+      toast.success(`${count} staff member${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected staff members");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
+
   const handleDelete = async (s: Staff) => {
     if (
       !(await confirm({
@@ -124,6 +179,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     try {
       await deleteStaff(s.id);
       toast.success("Staff member removed");
+      setSelectedIds((prev) => prev.filter((id) => id !== s.id));
     } catch (e: any) {
       toast.error(e.message || "Failed to delete staff");
     }
@@ -165,7 +221,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
       if (workload.length === 0) {
         rows.push([
           s.name,
-          s.role,
+          s.role || "",
           branch ? branch.name : "",
           s.status,
           "-",
@@ -179,14 +235,14 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
         workload.forEach(({ repair, item }) => {
           rows.push([
             s.name,
-            s.role,
+            s.role || "",
             branch ? branch.name : "",
             s.status,
             repair.number,
             repair.customerName,
             `${item.brand} ${item.item}`,
-            item.issues.join(", "),
-            item.expectedCompletionDate || "-",
+            item.issues || "-",
+            item.dueDate || "-",
             repair.status,
           ]);
         });
@@ -198,13 +254,13 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
   return (
     <>
       <PageHeader
-        eyebrow="Team Management"
+        eyebrow="Staff"
         title="Staff & Workload"
-        description="Add staff members under branches, assign them repairs, and monitor their active tasks."
+        description="Manage branch technicians and view repair item assignments"
         actions={
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <div className="flex gap-2">
             <ExportExcelButton
-              filename={`staff-workload-report-${new Date().toISOString().split("T")[0]}`}
+              filename="staff-workload-report"
               headers={exportHeaders}
               rows={exportRows}
             />
@@ -214,9 +270,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                 setEditing(null);
                 setOpen(true);
               }}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto shrink-0"
+              className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 cursor-pointer"
             >
-              <Plus className="size-4" /> New staff member
+              <Plus className="size-4" /> Add Staff
             </button>
           </div>
         }
@@ -261,10 +317,32 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
             </option>
           ))}
         </select>
-        <div className="text-xs text-muted-foreground sm:ml-auto">
-          {filteredStaff.length} staff members found
+        <div className="flex items-center gap-2 sm:ml-auto">
+          {filteredStaff.length > 0 && (
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+              <Checkbox
+                checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span>Select all</span>
+            </label>
+          )}
+          <div className="text-xs text-muted-foreground">
+            {filteredStaff.length} staff members found
+          </div>
         </div>
       </div>
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={filteredStaff.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="staff members"
+        className="mb-4"
+      />
 
       <div className="grid gap-4">
         {filteredStaff.map((s) => {
@@ -274,45 +352,59 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
             (w) => w.repair.status !== "Delivered" && w.repair.status !== "Cancelled",
           );
           const isExpanded = !!expandedStaff[s.id];
+          const isSelected = selectedIds.includes(s.id);
 
           return (
             <article
               key={s.id}
-              className="rounded-xl border border-border bg-card p-5 shadow-soft transition hover:shadow-soft"
+              className={`rounded-xl border bg-card p-5 shadow-soft transition ${
+                isSelected
+                  ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10"
+                  : "border-border hover:shadow-soft"
+              }`}
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-display text-2xl">{s.name}</h2>
-                    <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground font-medium">
-                      {s.role}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        s.status === "Active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                      }`}
-                    >
-                      {s.status}
-                    </span>
+                <div className="flex items-start gap-3">
+                  <div className="pt-2">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(s.id)}
+                      aria-label={`Select ${s.name}`}
+                    />
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {s.phone && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="size-3" /> {s.phone}
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-display text-2xl">{s.name}</h2>
+                      <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground font-medium">
+                        {s.role}
                       </span>
-                    )}
-                    {s.email && (
-                      <span className="flex items-center gap-1">
-                        <Mail className="size-3" /> {s.email}
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          s.status === "Active"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                        }`}
+                      >
+                        {s.status}
                       </span>
-                    )}
-                    {branch && (
-                      <span className="flex items-center gap-1 font-medium">
-                        <Landmark className="size-3" /> {branch.name}
-                      </span>
-                    )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      {s.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="size-3" /> {s.phone}
+                        </span>
+                      )}
+                      {s.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="size-3" /> {s.email}
+                        </span>
+                      )}
+                      {branch && (
+                        <span className="flex items-center gap-1 font-medium">
+                          <Landmark className="size-3" /> {branch.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -332,7 +424,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                         setEditing(s);
                         setOpen(true);
                       }}
-                      className="rounded-md p-1.5 hover:bg-accent"
+                      className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
                       title="Edit staff"
                     >
                       <Pencil className="size-4" />
@@ -340,7 +432,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                     <button
                       type="button"
                       onClick={() => handleDelete(s)}
-                      className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
                       title="Delete staff"
                     >
                       <Trash2 className="size-4" />

@@ -1,18 +1,65 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore, fmtDate, type Branch } from "@/lib/store";
 import { PageHeader } from "@/components/DashboardLayout";
 import { Plus, Trash2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 export const Route = createFileRoute("/admin/branches")({ component: AdminBranches });
 
 function AdminBranches() {
-  const { branches, products, bills, addBranch, updateBranch, deleteBranch } = useStore();
+  const { branches, products, bills, addBranch, updateBranch, deleteBranch, deleteBranches } =
+    useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Branch | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const confirm = useConfirm();
+
+  const branchIds = useMemo(() => branches.map((b) => b.id), [branches]);
+  const isAllSelected = branches.length > 0 && branches.every((b) => selectedIds.includes(b.id));
+  const isSomeSelected = branches.some((b) => selectedIds.includes(b.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !branchIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...branchIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} branch${count > 1 ? "es" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected branch${count > 1 ? "es" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteBranches(selectedIds);
+      toast.success(`${count} branch${count > 1 ? "es" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected branches");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   return (
     <>
@@ -26,26 +73,66 @@ function AdminBranches() {
               setEditing(null);
               setOpen(true);
             }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto cursor-pointer"
           >
             <Plus className="size-4" /> New branch
           </button>
         }
       />
 
+      <div className="mb-4 flex items-center justify-between">
+        {branches.length > 0 && (
+          <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+            <Checkbox
+              checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+              onCheckedChange={toggleSelectAll}
+            />
+            <span>Select all branches</span>
+          </label>
+        )}
+        <div className="text-xs text-muted-foreground ml-auto">
+          {branches.length} branches
+        </div>
+      </div>
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={branches.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(branchIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="branches"
+        className="mb-4"
+      />
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {branches.map((b) => {
           const productCount = products.filter((p) => p.branchId === b.id).length;
           const billCount = bills.filter((x) => x.branchId === b.id).length;
+          const isSelected = selectedIds.includes(b.id);
           return (
             <article
               key={b.id}
-              className="group rounded-xl border border-border bg-card p-5 transition hover:shadow-soft"
+              className={`group rounded-xl border bg-card p-5 transition shadow-sm ${
+                isSelected
+                  ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10"
+                  : "border-border hover:shadow-soft"
+              }`}
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-display text-2xl leading-tight">{b.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{b.email}</div>
+                <div className="flex items-start gap-3">
+                  <div className="pt-1">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(b.id)}
+                      aria-label={`Select ${b.name}`}
+                    />
+                  </div>
+                  <div>
+                    <div className="font-display text-2xl leading-tight">{b.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{b.email}</div>
+                  </div>
                 </div>
                 <div className="flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                   <button
@@ -53,7 +140,7 @@ function AdminBranches() {
                       setEditing(b);
                       setOpen(true);
                     }}
-                    className="rounded-md p-1.5 hover:bg-accent"
+                    className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
                     aria-label={`Edit ${b.name}`}
                     title="Edit branch"
                   >
@@ -70,12 +157,13 @@ function AdminBranches() {
                         try {
                           await deleteBranch(b.id);
                           toast.success("Branch removed");
+                          setSelectedIds((prev) => prev.filter((id) => id !== b.id));
                         } catch (e: any) {
                           toast.error(e.message || "Failed to delete branch");
                         }
                       }
                     }}
-                    className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                    className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
                     aria-label={`Delete ${b.name}`}
                     title="Delete branch"
                   >

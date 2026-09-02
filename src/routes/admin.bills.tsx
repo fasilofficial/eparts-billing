@@ -7,6 +7,8 @@ import { ExportExcelButton } from "@/components/admin/ExportExcelButton";
 import { X, Printer, Trash2, Pencil, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 export const Route = createFileRoute("/admin/bills")({ component: AdminBills });
 
@@ -331,7 +333,7 @@ function EditBillModal({
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 function AdminBills() {
-  const { bills, branches, deleteBill } = useStore();
+  const { bills, branches, deleteBill, deleteBills } = useStore();
   const [branchFilter, setBranchFilter] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -339,6 +341,8 @@ function AdminBills() {
   const [maxAmt, setMaxAmt] = useState("");
   const [viewing, setViewing] = useState<Bill | null>(null);
   const [editing, setEditing] = useState<Bill | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const confirm = useConfirm();
 
   const filtered = useMemo(() => {
@@ -353,6 +357,48 @@ function AdminBills() {
       return true;
     });
   }, [bills, branchFilter, from, to, minAmt, maxAmt]);
+
+  const scopedIds = useMemo(() => filtered.map((b) => b.id), [filtered]);
+  const isAllSelected = filtered.length > 0 && filtered.every((b) => selectedIds.includes(b.id));
+  const isSomeSelected = filtered.some((b) => selectedIds.includes(b.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} bill${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected bill${count > 1 ? "s" : ""}? This will restore their items to stock. This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteBills(selectedIds);
+      toast.success(`${count} bill${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected bills");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const totalRevenue = filtered.reduce((s, b) => s + b.total, 0);
   const avgTicket = filtered.length ? totalRevenue / filtered.length : 0;
@@ -456,10 +502,28 @@ function AdminBills() {
         />
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={filtered.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="bills"
+        className="mb-4"
+      />
+
       <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
+              <th className="w-10 px-4 py-3 text-center">
+                <Checkbox
+                  checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all bills"
+                />
+              </th>
               <th className="px-5 py-3 text-left font-medium">Invoice</th>
               <th className="px-5 py-3 text-left font-medium">Branch</th>
               <th className="px-5 py-3 text-left font-medium">Customer</th>
@@ -472,12 +536,25 @@ function AdminBills() {
           <tbody>
             {filtered.map((b) => {
               const br = branches.find((x) => x.id === b.branchId);
+              const isSelected = selectedIds.includes(b.id);
               return (
                 <tr
                   key={b.id}
-                  className="cursor-pointer border-b border-border/60 transition hover:bg-muted/50"
+                  className={`cursor-pointer border-b border-border/60 transition ${
+                    isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/50"
+                  }`}
                   onClick={() => setViewing(b)}
                 >
+                  <td
+                    className="w-10 px-4 py-3 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(b.id)}
+                      aria-label={`Select ${b.number}`}
+                    />
+                  </td>
                   <td className="px-5 py-3 font-medium">{b.number}</td>
                   <td className="px-5 py-3 text-muted-foreground">{br?.name ?? "—"}</td>
                   <td className="px-5 py-3 text-muted-foreground">{b.customer ?? "—"}</td>
@@ -489,7 +566,7 @@ function AdminBills() {
                       <button
                         type="button"
                         onClick={() => setEditing(b)}
-                        className="rounded-md p-1 text-muted-foreground hover:bg-accent inline-flex items-center"
+                        className="rounded-md p-1 text-muted-foreground hover:bg-accent inline-flex items-center cursor-pointer"
                         title="Edit Bill"
                       >
                         <Pencil className="size-4" />
@@ -506,12 +583,13 @@ function AdminBills() {
                             try {
                               await deleteBill(b.id);
                               toast.success("Bill deleted");
+                              setSelectedIds((prev) => prev.filter((id) => id !== b.id));
                             } catch (e) {
                               toast.error(e instanceof Error ? e.message : "Failed to delete bill");
                             }
                           }
                         }}
-                        className="rounded-md p-1 text-destructive hover:bg-accent inline-flex items-center"
+                        className="rounded-md p-1 text-destructive hover:bg-accent inline-flex items-center cursor-pointer"
                         title="Delete Bill"
                       >
                         <Trash2 className="size-4" />
@@ -523,7 +601,7 @@ function AdminBills() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
                   No bills match these filters.
                 </td>
               </tr>

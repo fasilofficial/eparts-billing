@@ -7,6 +7,8 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { supabase } from "@/lib/supabase";
 import { ImageLightbox } from "./ImageLightbox";
 import { useNavigate } from "@tanstack/react-router";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const defaultIssues = [
   "Screen Broken",
@@ -53,8 +55,17 @@ const emptyItem = (): DraftItem => ({
 });
 
 export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, customers, repairs, addRepair, updateRepair, deleteRepair, staff } =
-    useStore();
+  const {
+    session,
+    branches,
+    customers,
+    repairs,
+    addRepair,
+    updateRepair,
+    deleteRepair,
+    deleteRepairs,
+    staff,
+  } = useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
   const defaultBranchId = isAdmin
@@ -65,6 +76,8 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Repair | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [customerFilter, setCustomerFilter] = useState("all");
@@ -232,6 +245,48 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
     ],
   );
 
+  const scopedIds = useMemo(() => scopedRepairs.map((r) => r.id), [scopedRepairs]);
+  const isAllSelected = scopedRepairs.length > 0 && scopedRepairs.every((r) => selectedIds.includes(r.id));
+  const isSomeSelected = scopedRepairs.some((r) => selectedIds.includes(r.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} repair record${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected repair record${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteRepairs(selectedIds);
+      toast.success(`${count} repair record${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected repairs");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -245,7 +300,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
               setEditing(null);
               setOpen(true);
             }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto cursor-pointer"
           >
             <Plus className="size-4" /> New repair
           </button>
@@ -291,6 +346,42 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           ))}
         </select>
         <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All statuses</option>
+          {["Open", "In Progress", "On Hold", "Completed", "Cancelled"].map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+        <select
+          value={customerFilter}
+          onChange={(e) => setCustomerFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All customers</option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={modelFilter}
+          onChange={(e) => setModelFilter(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All device models</option>
+          {uniqueModels.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+        <select
           value={datePeriod}
           onChange={(e) => applyDatePeriod(e.target.value)}
           className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
@@ -319,18 +410,6 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
             />
           </div>
         )}
-        <select
-          value={modelFilter}
-          onChange={(e) => setModelFilter(e.target.value)}
-          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
-        >
-          <option value="all">All models</option>
-          {uniqueModels.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
         <button
           type="button"
           onClick={() => setFilterOpen(true)}
@@ -349,10 +428,32 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
             amountMin ||
             amountMax) && <span className="ml-1 flex size-2 rounded-full bg-ink animate-pulse" />}
         </button>
-        <div className="text-xs text-muted-foreground sm:ml-auto">
-          {scopedRepairs.length} repairs
+        <div className="flex items-center gap-2 sm:ml-auto">
+          {scopedRepairs.length > 0 && (
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+              <Checkbox
+                checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span>Select all</span>
+            </label>
+          )}
+          <div className="text-xs text-muted-foreground">
+            {scopedRepairs.length} repairs
+          </div>
         </div>
       </div>
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scopedRepairs.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="repairs"
+        className="mb-4"
+      />
 
       <div className="grid gap-3">
         {scopedRepairs.map((repair) => {
@@ -360,22 +461,36 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
           const totalAmount = repair.items.reduce((sum, item) => sum + (item.serviceCost || 0), 0);
           const totalPartsCost = repair.items.reduce((sum, item) => sum + (item.partsCost || 0), 0);
           const totalProfit = totalAmount - totalPartsCost;
+          const isSelected = selectedIds.includes(repair.id);
           return (
             <article
               key={repair.id}
-              className="rounded-xl border border-border bg-card p-5 shadow-soft"
+              className={`rounded-xl border bg-card p-5 shadow-soft transition ${
+                isSelected
+                  ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10"
+                  : "border-border hover:shadow-soft"
+              }`}
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-display text-2xl">{repair.number}</h2>
-                    <span className="rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
-                      {repair.status}
-                    </span>
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="pt-1.5">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(repair.id)}
+                      aria-label={`Select ${repair.number}`}
+                    />
                   </div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {repair.customerName} · {branch?.name ?? "Unknown branch"} ·{" "}
-                    {fmtDate(repair.entryDate || repair.createdAt)}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-display text-2xl">{repair.number}</h2>
+                      <span className="rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                        {repair.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {repair.customerName} · {branch?.name ?? "Unknown branch"} ·{" "}
+                      {fmtDate(repair.entryDate || repair.createdAt)}
+                    </div>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-start justify-between gap-3 sm:block sm:text-right">
@@ -410,7 +525,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                           search: { repairId: repair.id },
                         })
                       }
-                      className="rounded-md p-1.5 hover:bg-accent text-muted-foreground hover:text-foreground transition"
+                      className="rounded-md p-1.5 hover:bg-accent text-muted-foreground hover:text-foreground transition cursor-pointer"
                       aria-label={`Create bill for ${repair.number}`}
                       title="Create bill for this repair"
                     >
@@ -422,7 +537,7 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                         setEditing(repair);
                         setOpen(true);
                       }}
-                      className="rounded-md p-1.5 hover:bg-accent"
+                      className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
                       aria-label={`Edit ${repair.number}`}
                       title="Edit repair"
                     >
@@ -441,11 +556,12 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                         try {
                           await deleteRepair(repair.id);
                           toast.success("Repair deleted");
+                          setSelectedIds((prev) => prev.filter((id) => id !== repair.id));
                         } catch (e: any) {
                           toast.error(e.message || "Failed to delete repair");
                         }
                       }}
-                      className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
                       aria-label={`Delete ${repair.number}`}
                       title="Delete repair"
                     >

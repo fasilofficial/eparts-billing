@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { ImageLightbox } from "./ImageLightbox";
 import { supabase } from "@/lib/supabase";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const today = () => new Date().toISOString().slice(0, 10);
 export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
@@ -19,6 +21,7 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
     addExpense,
     updateExpense,
     deleteExpense,
+    deleteExpenses,
   } = useStore();
 
   const expenseCategories = useMemo(() => {
@@ -49,6 +52,8 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
   const [endDate, setEndDate] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
     photos: string[];
@@ -77,6 +82,48 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
       }),
     [branchFilter, expenses, isAdmin, query, session?.branchId, startDate, endDate, categoryFilter, statusFilter],
   );
+
+  const scopedIds = useMemo(() => scoped.map((e) => e.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((e) => selectedIds.includes(e.id));
+  const isSomeSelected = scoped.some((e) => selectedIds.includes(e.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} expense${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected expense${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteExpenses(selectedIds);
+      toast.success(`${count} expense${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected expenses");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const now = new Date();
   const stats = {
@@ -208,10 +255,28 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
         <div className="text-xs text-muted-foreground sm:ml-auto">{scoped.length} expenses</div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="expenses"
+        className="mb-4"
+      />
+
       <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
+              <th className="w-10 px-4 py-3 text-center">
+                <Checkbox
+                  checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all expenses"
+                />
+              </th>
               <th className="px-5 py-3 text-left font-medium">Description</th>
               <th className="px-5 py-3 text-left font-medium">Category</th>
               <th className="px-5 py-3 text-left font-medium">Date</th>
@@ -221,105 +286,118 @@ export function ExpensesPage({ mode }: { mode: "admin" | "branch" }) {
             </tr>
           </thead>
           <tbody>
-            {scoped.map((expense) => (
-              <tr
-                key={expense.id}
-                className="group border-b border-border/60 transition hover:bg-muted/50"
-              >
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    {expense.receipt && expense.receipt.startsWith("http") ? (
-                      expense.receipt.toLowerCase().includes(".pdf") ? (
-                        <a
-                          href={expense.receipt}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="size-10 flex-shrink-0 rounded-md border border-border flex items-center justify-center bg-muted text-muted-foreground hover:bg-accent transition"
-                          title="View PDF receipt in new tab"
+            {scoped.map((expense) => {
+              const isSelected = selectedIds.includes(expense.id);
+              return (
+                <tr
+                  key={expense.id}
+                  className={`group border-b border-border/60 transition ${
+                    isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/50"
+                  }`}
+                >
+                  <td className="w-10 px-4 py-3 text-center">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(expense.id)}
+                      aria-label={`Select ${expense.description}`}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      {expense.receipt && expense.receipt.startsWith("http") ? (
+                        expense.receipt.toLowerCase().includes(".pdf") ? (
+                          <a
+                            href={expense.receipt}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="size-10 flex-shrink-0 rounded-md border border-border flex items-center justify-center bg-muted text-muted-foreground hover:bg-accent transition"
+                            title="View PDF receipt in new tab"
+                          >
+                            <FileText className="size-5 text-red-500" />
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLightbox({
+                                isOpen: true,
+                                photos: [expense.receipt!],
+                                currentIndex: 0,
+                              });
+                            }}
+                            className="size-10 flex-shrink-0 rounded-md border border-border overflow-hidden bg-muted hover:opacity-80 transition"
+                            title="Click to preview receipt"
+                          >
+                            <img src={expense.receipt} alt="" className="size-full object-cover" />
+                          </button>
+                        )
+                      ) : expense.receipt ? (
+                        <div
+                          className="size-10 flex-shrink-0 rounded-md border border-border flex items-center justify-center bg-muted text-muted-foreground text-[10px] p-0.5 text-center break-all overflow-hidden"
+                          title={expense.receipt}
                         >
-                          <FileText className="size-5 text-red-500" />
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setLightbox({
-                              isOpen: true,
-                              photos: [expense.receipt!],
-                              currentIndex: 0,
-                            });
-                          }}
-                          className="size-10 flex-shrink-0 rounded-md border border-border overflow-hidden bg-muted hover:opacity-80 transition"
-                          title="Click to preview receipt"
-                        >
-                          <img src={expense.receipt} alt="" className="size-full object-cover" />
-                        </button>
-                      )
-                    ) : expense.receipt ? (
-                      <div
-                        className="size-10 flex-shrink-0 rounded-md border border-border flex items-center justify-center bg-muted text-muted-foreground text-[10px] p-0.5 text-center break-all overflow-hidden"
-                        title={expense.receipt}
-                      >
-                        📄 {expense.receipt.slice(0, 10)}
+                          📄 {expense.receipt.slice(0, 10)}
+                        </div>
+                      ) : null}
+                      <div>
+                        <div className="font-medium">{expense.description}</div>
+                        <div className="text-xs text-muted-foreground">{expense.expenseNumber}</div>
                       </div>
-                    ) : null}
-                    <div>
-                      <div className="font-medium">{expense.description}</div>
-                      <div className="text-xs text-muted-foreground">{expense.expenseNumber}</div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-5 py-3 text-muted-foreground">{expense.category}</td>
-                <td className="px-5 py-3 num">{expense.date}</td>
-                <td className="px-5 py-3 text-right num">{fmtMoney(expense.total)}</td>
-                <td className="px-5 py-3">
-                  {expense.status}
-                  {expense.isRecurring && (
-                    <span className="ml-2 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      Recurring
-                    </span>
-                  )}
-                </td>
-                <td className="px-5 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(expense);
-                      setOpen(true);
-                    }}
-                    className="rounded-md p-1.5 hover:bg-accent"
-                    aria-label="Edit expense"
-                  >
-                    <Pencil className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (
-                        !(await confirm({
-                          title: "Delete expense?",
-                          description: `Are you sure you want to delete expense ${expense.expenseNumber}?`,
-                        }))
-                      )
-                        return;
-                      try {
-                        await deleteExpense(expense.id);
-                        toast.success("Expense deleted");
-                      } catch (e: any) {
-                        toast.error(e.message || "Failed to delete expense");
-                      }
-                    }}
-                    className="rounded-md p-1.5 text-destructive hover:bg-accent"
-                    aria-label="Delete expense"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground">{expense.category}</td>
+                  <td className="px-5 py-3 num">{expense.date}</td>
+                  <td className="px-5 py-3 text-right num">{fmtMoney(expense.total)}</td>
+                  <td className="px-5 py-3">
+                    {expense.status}
+                    {expense.isRecurring && (
+                      <span className="ml-2 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        Recurring
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(expense);
+                        setOpen(true);
+                      }}
+                      className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
+                      aria-label="Edit expense"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (
+                          !(await confirm({
+                            title: "Delete expense?",
+                            description: `Are you sure you want to delete expense ${expense.expenseNumber}?`,
+                          }))
+                        )
+                          return;
+                        try {
+                          await deleteExpense(expense.id);
+                          toast.success("Expense deleted");
+                          setSelectedIds((prev) => prev.filter((id) => id !== expense.id));
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to delete expense");
+                        }
+                      }}
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
+                      aria-label="Delete expense"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
             {scoped.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
                   No expenses yet.
                 </td>
               </tr>

@@ -4,6 +4,8 @@ import { useStore, fmtMoney, type AccountTransfer } from "@/lib/store";
 import { ArrowLeftRight, Plus, Trash2, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -15,6 +17,7 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
     accountTransfers,
     addAccountTransfer,
     deleteAccountTransfer,
+    deleteAccountTransfers,
   } = useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
@@ -24,6 +27,8 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
   const [branchId, setBranchId] = useState(defaultBranchId);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   const scoped = useMemo(
     () =>
@@ -34,6 +39,48 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
       ),
     [accountTransfers, branchId, isAdmin, query, session?.branchId],
   );
+
+  const scopedIds = useMemo(() => scoped.map((t) => t.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((t) => selectedIds.includes(t.id));
+  const isSomeSelected = scoped.some((t) => selectedIds.includes(t.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} transfer${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected transfer${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteAccountTransfers(selectedIds);
+      toast.success(`${count} transfer${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected transfers");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const total = scoped.reduce((sum, t) => sum + t.transferAmount, 0);
   const thisMonthTransfers = scoped.filter((t) => {
@@ -97,6 +144,17 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
         </div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="transfers"
+        className="mb-4"
+      />
+
       {scoped.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-5 py-16 text-center">
           <div className="mx-auto grid size-12 place-items-center rounded-full bg-accent/50 text-muted-foreground">
@@ -108,7 +166,7 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
           </p>
           <button
             onClick={() => setOpen(true)}
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft cursor-pointer"
           >
             <Plus className="size-4" /> Create First Transfer
           </button>
@@ -118,6 +176,13 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
           <table className="w-full text-sm">
             <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
               <tr className="border-b border-border bg-muted/20">
+                <th className="w-10 px-4 py-3.5 text-center">
+                  <Checkbox
+                    checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all transfers"
+                  />
+                </th>
                 <th className="px-5 py-3.5 text-left font-semibold">Reference</th>
                 <th className="px-5 py-3.5 text-left font-semibold">From Account</th>
                 <th className="px-5 py-3.5 text-left font-semibold">To Account</th>
@@ -127,49 +192,65 @@ export function AccountTransfersPage({ mode }: { mode: "admin" | "branch" }) {
               </tr>
             </thead>
             <tbody>
-              {scoped.map((t) => (
-                <tr key={t.id} className="border-b border-border/60 transition hover:bg-muted/10">
-                  <td className="px-5 py-3.5">
-                    <div className="font-semibold text-foreground">{t.referenceNumber}</div>
-                    {t.description && (
-                      <div className="mt-0.5 text-xs text-muted-foreground max-w-xs truncate">
-                        {t.description}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-5 py-3.5 font-medium text-foreground/80">
-                    {t.fromAccountName}
-                  </td>
-                  <td className="px-5 py-3.5 font-medium text-foreground/80">{t.toAccountName}</td>
-                  <td className="px-5 py-3.5 text-muted-foreground num">{t.transferDate}</td>
-                  <td className="px-5 py-3.5 text-right font-bold num text-foreground/90">
-                    {fmtMoney(t.transferAmount)}
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <button
-                      onClick={async () => {
-                        if (
-                          !(await confirm({
-                            title: "Delete transfer?",
-                            description: `Are you sure you want to delete transfer ${t.referenceNumber}?`,
-                          }))
-                        )
-                          return;
-                        try {
-                          await deleteAccountTransfer(t.id);
-                          toast.success("Transfer deleted");
-                        } catch (e: any) {
-                          toast.error(e.message || "Failed to delete transfer");
-                        }
-                      }}
-                      className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition"
-                      title="Delete transfer"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {scoped.map((t) => {
+                const isSelected = selectedIds.includes(t.id);
+                return (
+                  <tr
+                    key={t.id}
+                    className={`border-b border-border/60 transition ${
+                      isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/10"
+                    }`}
+                  >
+                    <td className="w-10 px-4 py-3.5 text-center">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(t.id)}
+                        aria-label={`Select ${t.referenceNumber}`}
+                      />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <div className="font-semibold text-foreground">{t.referenceNumber}</div>
+                      {t.description && (
+                        <div className="mt-0.5 text-xs text-muted-foreground max-w-xs truncate">
+                          {t.description}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-foreground/80">
+                      {t.fromAccountName}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-foreground/80">{t.toAccountName}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground num">{t.transferDate}</td>
+                    <td className="px-5 py-3.5 text-right font-bold num text-foreground/90">
+                      {fmtMoney(t.transferAmount)}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button
+                        onClick={async () => {
+                          if (
+                            !(await confirm({
+                              title: "Delete transfer?",
+                              description: `Are you sure you want to delete transfer ${t.referenceNumber}?`,
+                            }))
+                          )
+                            return;
+                          try {
+                            await deleteAccountTransfer(t.id);
+                            toast.success("Transfer deleted");
+                            setSelectedIds((prev) => prev.filter((id) => id !== t.id));
+                          } catch (e: any) {
+                            toast.error(e.message || "Failed to delete transfer");
+                          }
+                        }}
+                        className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition cursor-pointer"
+                        title="Delete transfer"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

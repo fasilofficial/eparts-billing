@@ -4,12 +4,22 @@ import { useStore, fmtMoney, type Supplier } from "@/lib/store";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const countryCodes = ["+91", "+1", "+44", "+971", "+61"];
 const paymentTerms = ["Net 15", "Net 30", "Net 45", "Net 60", "Due on Receipt"];
 
 export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, suppliers, addSupplier, updateSupplier, deleteSupplier } = useStore();
+  const {
+    session,
+    branches,
+    suppliers,
+    addSupplier,
+    updateSupplier,
+    deleteSupplier,
+    deleteSuppliers,
+  } = useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
   const defaultBranchId = isAdmin
@@ -19,6 +29,8 @@ export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   const scoped = useMemo(
     () =>
@@ -31,6 +43,48 @@ export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
       }),
     [branchFilter, isAdmin, query, session?.branchId, suppliers],
   );
+
+  const scopedIds = useMemo(() => scoped.map((s) => s.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((s) => selectedIds.includes(s.id));
+  const isSomeSelected = scoped.some((s) => selectedIds.includes(s.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} supplier${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected supplier${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteSuppliers(selectedIds);
+      toast.success(`${count} supplier${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected suppliers");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const stats = {
     total: scoped.length,
@@ -99,10 +153,28 @@ export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
         <div className="text-xs text-muted-foreground sm:ml-auto">{scoped.length} suppliers</div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="suppliers"
+        className="mb-4"
+      />
+
       <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
+              <th className="w-10 px-4 py-3 text-center">
+                <Checkbox
+                  checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all suppliers"
+                />
+              </th>
               <th className="px-5 py-3 text-left font-medium">Supplier</th>
               <th className="px-5 py-3 text-left font-medium">Contact</th>
               {isAdmin && <th className="px-5 py-3 text-left font-medium">Branch</th>}
@@ -114,11 +186,21 @@ export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
           <tbody>
             {scoped.map((supplier) => {
               const branch = branches.find((b) => b.id === supplier.branchId);
+              const isSelected = selectedIds.includes(supplier.id);
               return (
                 <tr
                   key={supplier.id}
-                  className="group border-b border-border/60 transition hover:bg-muted/50"
+                  className={`group border-b border-border/60 transition ${
+                    isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/50"
+                  }`}
                 >
+                  <td className="w-10 px-4 py-3 text-center">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(supplier.id)}
+                      aria-label={`Select ${supplier.companyName}`}
+                    />
+                  </td>
                   <td className="px-5 py-3 font-medium">
                     {supplier.companyName}
                     <div className="text-xs text-muted-foreground">{supplier.contactPerson}</div>
@@ -141,7 +223,7 @@ export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
                         setEditing(supplier);
                         setOpen(true);
                       }}
-                      className="rounded-md p-1.5 hover:bg-accent"
+                      className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
                       aria-label="Edit supplier"
                     >
                       <Pencil className="size-3.5" />
@@ -159,11 +241,12 @@ export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
                         try {
                           await deleteSupplier(supplier.id);
                           toast.success("Supplier deleted");
+                          setSelectedIds((prev) => prev.filter((id) => id !== supplier.id));
                         } catch (e: any) {
                           toast.error(e.message || "Failed to delete supplier");
                         }
                       }}
-                      className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
                       aria-label="Delete supplier"
                     >
                       <Trash2 className="size-3.5" />
@@ -175,7 +258,7 @@ export function SuppliersPage({ mode }: { mode: "admin" | "branch" }) {
             {scoped.length === 0 && (
               <tr>
                 <td
-                  colSpan={isAdmin ? 6 : 5}
+                  colSpan={isAdmin ? 7 : 6}
                   className="px-5 py-12 text-center text-muted-foreground"
                 >
                   No suppliers yet.

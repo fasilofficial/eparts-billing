@@ -4,14 +4,18 @@ import { useStore, type Brand } from "@/lib/store";
 import { Award, Pencil, Plus, Trash2, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 export function BrandsPage() {
-  const { session, brands, addBrand, updateBrand, deleteBrand } = useStore();
+  const { session, brands, addBrand, updateBrand, deleteBrand, deleteBrands } = useStore();
   const confirm = useConfirm();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Brand | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   const isAdmin = session?.role === "admin";
 
@@ -24,6 +28,48 @@ export function BrandsPage() {
       ),
     [brands, query, status],
   );
+
+  const scopedIds = useMemo(() => scoped.map((b) => b.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((b) => selectedIds.includes(b.id));
+  const isSomeSelected = scoped.some((b) => selectedIds.includes(b.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} brand${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected brand${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteBrands(selectedIds);
+      toast.success(`${count} brand${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected brands");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const total = brands.length;
   const active = brands.filter((b) => b.isActive).length;
@@ -46,7 +92,7 @@ export function BrandsPage() {
                 setEditing(null);
                 setOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft animate-fade-in"
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft animate-fade-in cursor-pointer"
             >
               <Plus className="size-4" /> Add Brand
             </button>
@@ -78,6 +124,17 @@ export function BrandsPage() {
         <div className="text-xs text-muted-foreground sm:ml-auto">{scoped.length} brands found</div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="brands"
+        className="mb-4"
+      />
+
       {scoped.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-5 py-16 text-center animate-fade-in">
           <div className="mx-auto grid size-12 place-items-center rounded-full bg-accent/50 text-muted-foreground">
@@ -93,7 +150,7 @@ export function BrandsPage() {
                 setEditing(null);
                 setOpen(true);
               }}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft"
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft cursor-pointer"
             >
               <Plus className="size-4" /> Create First Brand
             </button>
@@ -104,65 +161,92 @@ export function BrandsPage() {
           <table className="w-full text-sm">
             <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
               <tr className="border-b border-border bg-muted/20">
+                {isAdmin && (
+                  <th className="w-10 px-4 py-3.5 text-center">
+                    <Checkbox
+                      checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all brands"
+                    />
+                  </th>
+                )}
                 <th className="px-5 py-3.5 text-left font-semibold">Brand Name</th>
                 <th className="px-5 py-3.5 text-left font-semibold">Status</th>
                 {isAdmin && <th className="px-5 py-3.5 text-right font-semibold">Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {scoped.map((b) => (
-                <tr key={b.id} className="border-b border-border/60 transition hover:bg-muted/10">
-                  <td className="px-5 py-3.5 font-medium text-foreground">{b.name}</td>
-                  <td className="px-5 py-3.5">
-                    <span
-                      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold leading-none ${
-                        b.isActive
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-rose-50 text-rose-700 border-rose-200"
-                      }`}
-                    >
-                      {b.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  {isAdmin && (
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => {
-                            setEditing(b);
-                            setOpen(true);
-                          }}
-                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
-                          title="Edit brand"
-                        >
-                          <Pencil className="size-4" />
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (
-                              !(await confirm({
-                                title: "Delete brand?",
-                                description: `Are you sure you want to delete ${b.name}?`,
-                              }))
-                            )
-                              return;
-                            try {
-                              await deleteBrand(b.id);
-                              toast.success("Brand deleted successfully");
-                            } catch (e: any) {
-                              toast.error(e.message || "Failed to delete brand");
-                            }
-                          }}
-                          className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition"
-                          title="Delete brand"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
+              {scoped.map((b) => {
+                const isSelected = selectedIds.includes(b.id);
+                return (
+                  <tr
+                    key={b.id}
+                    className={`border-b border-border/60 transition ${
+                      isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/10"
+                    }`}
+                  >
+                    {isAdmin && (
+                      <td className="w-10 px-4 py-3.5 text-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(b.id)}
+                          aria-label={`Select ${b.name}`}
+                        />
+                      </td>
+                    )}
+                    <td className="px-5 py-3.5 font-medium text-foreground">{b.name}</td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold leading-none ${
+                          b.isActive
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-rose-50 text-rose-700 border-rose-200"
+                        }`}
+                      >
+                        {b.isActive ? "Active" : "Inactive"}
+                      </span>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    {isAdmin && (
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => {
+                              setEditing(b);
+                              setOpen(true);
+                            }}
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition cursor-pointer"
+                            title="Edit brand"
+                          >
+                            <Pencil className="size-4" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (
+                                !(await confirm({
+                                  title: "Delete brand?",
+                                  description: `Are you sure you want to delete ${b.name}?`,
+                                }))
+                              )
+                                return;
+                              try {
+                                await deleteBrand(b.id);
+                                toast.success("Brand deleted successfully");
+                                setSelectedIds((prev) => prev.filter((id) => id !== b.id));
+                              } catch (e: any) {
+                                toast.error(e.message || "Failed to delete brand");
+                              }
+                            }}
+                            className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition cursor-pointer"
+                            title="Delete brand"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const accountTypes = ["Bank Account", "Cash", "Card", "UPI", "Cheque", "Other"] as const;
 
@@ -26,6 +28,7 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
     addPaymentAccount,
     updatePaymentAccount,
     deletePaymentAccount,
+    deletePaymentAccounts,
   } = useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
@@ -37,6 +40,8 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PaymentAccount | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   const scoped = useMemo(
     () =>
@@ -54,6 +59,48 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
       }),
     [branchFilter, isAdmin, paymentAccounts, query, session?.branchId, statusFilter],
   );
+
+  const scopedIds = useMemo(() => scoped.map((a) => a.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((a) => selectedIds.includes(a.id));
+  const isSomeSelected = scoped.some((a) => selectedIds.includes(a.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} payment account${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected payment account${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deletePaymentAccounts(selectedIds);
+      toast.success(`${count} payment account${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected payment accounts");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const stats = useMemo(() => {
     return {
@@ -125,10 +172,32 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
         </select>
-        <div className="text-xs text-muted-foreground sm:ml-auto">
-          {scoped.length} accounts found
+        <div className="flex items-center gap-2 sm:ml-auto">
+          {scoped.length > 0 && (
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+              <Checkbox
+                checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span>Select all</span>
+            </label>
+          )}
+          <div className="text-xs text-muted-foreground">
+            {scoped.length} accounts found
+          </div>
         </div>
       </div>
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="payment accounts"
+        className="mb-4"
+      />
 
       {scoped.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-5 py-16 text-center">
@@ -141,7 +210,7 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
           </p>
           <button
             onClick={() => setOpen(true)}
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:opacity-90 shadow-soft cursor-pointer"
           >
             <Plus className="size-4" /> Create Account
           </button>
@@ -152,12 +221,24 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
             const Icon = iconFor(a.accountType);
             const isAccActive = a.status === "Active";
             const branchName = branches.find((b) => b.id === a.branchId)?.name ?? "Branch";
+            const isSelected = selectedIds.includes(a.id);
             return (
               <article
                 key={a.id}
-                className="group relative rounded-2xl border border-border bg-card p-5 transition hover:shadow-soft duration-300"
+                className={`group relative rounded-2xl border bg-card p-5 transition shadow-sm duration-300 ${
+                  isSelected
+                    ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10"
+                    : "border-border hover:shadow-soft"
+                }`}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="pt-1">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(a.id)}
+                      aria-label={`Select ${a.accountName}`}
+                    />
+                  </div>
                   <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent text-foreground/80 transition group-hover:bg-ink group-hover:text-paper duration-300">
                     <Icon className="size-6" />
                   </div>
@@ -205,7 +286,7 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
                         setEditing(a);
                         setOpen(true);
                       }}
-                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition cursor-pointer"
                       title="Edit account"
                     >
                       <Pencil className="size-4" />
@@ -222,11 +303,12 @@ export function PaymentAccountsPage({ mode }: { mode: "admin" | "branch" }) {
                         try {
                           await deletePaymentAccount(a.id);
                           toast.success("Account deleted");
+                          setSelectedIds((prev) => prev.filter((id) => id !== a.id));
                         } catch (e: any) {
                           toast.error(e.message || "Failed to delete account");
                         }
                       }}
-                      className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition"
+                      className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition cursor-pointer"
                       title="Delete account"
                     >
                       <Trash2 className="size-4" />

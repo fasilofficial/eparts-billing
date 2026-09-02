@@ -303,42 +303,53 @@ interface StoreCtx extends StoreState {
   addAdmin: (a: Omit<Admin, "id" | "createdAt">) => Promise<void>;
   updateAdmin: (id: string, patch: Partial<Admin>) => Promise<void>;
   deleteAdmin: (id: string) => Promise<void>;
+  deleteAdmins: (ids: string[]) => Promise<void>;
   addBranch: (b: Omit<Branch, "id" | "createdAt">) => Promise<void>;
   updateBranch: (id: string, patch: Partial<Branch>) => Promise<void>;
   deleteBranch: (id: string) => Promise<void>;
+  deleteBranches: (ids: string[]) => Promise<void>;
   addProduct: (p: Omit<Product, "id">) => Promise<void>;
   updateProduct: (id: string, patch: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  deleteProducts: (ids: string[]) => Promise<void>;
   addBill: (b: Omit<Bill, "id" | "number" | "createdAt">) => Promise<Bill | null>;
   updateBill: (id: string, patch: Partial<Omit<Bill, "id" | "number" | "createdAt">>) => Promise<void>;
   deleteBill: (id: string) => Promise<void>;
+  deleteBills: (ids: string[]) => Promise<void>;
   addCustomer: (c: Omit<Customer, "id" | "createdAt">) => Promise<Customer | null>;
   updateCustomer: (id: string, patch: Omit<Customer, "id" | "createdAt">) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  deleteCustomers: (ids: string[]) => Promise<void>;
   addRepair: (r: Omit<Repair, "id" | "number" | "createdAt" | "status">) => Promise<Repair | null>;
   updateRepair: (id: string, patch: Omit<Repair, "id" | "number" | "createdAt">) => Promise<void>;
   deleteRepair: (id: string) => Promise<void>;
+  deleteRepairs: (ids: string[]) => Promise<void>;
   addSupplier: (s: Omit<Supplier, "id" | "createdAt">) => Promise<void>;
   updateSupplier: (id: string, patch: Omit<Supplier, "id" | "createdAt">) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
+  deleteSuppliers: (ids: string[]) => Promise<void>;
   addExpense: (e: Omit<Expense, "id" | "createdAt">) => Promise<void>;
   updateExpense: (id: string, patch: Omit<Expense, "id" | "createdAt">) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+  deleteExpenses: (ids: string[]) => Promise<void>;
   addPurchaseOrder: (p: Omit<PurchaseOrder, "id" | "number" | "createdAt">) => Promise<void>;
   updatePurchaseOrder: (
     id: string,
     patch: Omit<PurchaseOrder, "id" | "number" | "createdAt">,
   ) => Promise<void>;
   deletePurchaseOrder: (id: string) => Promise<void>;
+  deletePurchaseOrders: (ids: string[]) => Promise<void>;
   addReturn: (r: Omit<ReturnRecord, "id" | "number" | "createdAt">) => Promise<void>;
   updateReturn: (
     id: string,
     patch: Omit<ReturnRecord, "id" | "number" | "createdAt">,
   ) => Promise<void>;
   deleteReturn: (id: string) => Promise<void>;
+  deleteReturns: (ids: string[]) => Promise<void>;
   addCategory: (c: Omit<Category, "id" | "createdAt">) => Promise<void>;
   updateCategory: (id: string, patch: Omit<Category, "id" | "createdAt">) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  deleteCategories: (ids: string[]) => Promise<void>;
   addPaymentAccount: (
     a: Omit<PaymentAccount, "id" | "createdAt" | "currentBalance">,
   ) => Promise<void>;
@@ -347,6 +358,7 @@ interface StoreCtx extends StoreState {
     patch: Omit<PaymentAccount, "id" | "createdAt">,
   ) => Promise<void>;
   deletePaymentAccount: (id: string) => Promise<void>;
+  deletePaymentAccounts: (ids: string[]) => Promise<void>;
   addAccountTransfer: (
     t: Omit<AccountTransfer, "id" | "createdAt" | "fromAccountName" | "toAccountName">,
   ) => Promise<void>;
@@ -355,12 +367,15 @@ interface StoreCtx extends StoreState {
     patch: Omit<AccountTransfer, "id" | "createdAt">,
   ) => Promise<void>;
   deleteAccountTransfer: (id: string) => Promise<void>;
+  deleteAccountTransfers: (ids: string[]) => Promise<void>;
   addBrand: (b: Omit<Brand, "id" | "createdAt">) => Promise<void>;
   updateBrand: (id: string, patch: Omit<Brand, "id" | "createdAt">) => Promise<void>;
   deleteBrand: (id: string) => Promise<void>;
+  deleteBrands: (ids: string[]) => Promise<void>;
   addStaff: (s: Omit<Staff, "id" | "createdAt">) => Promise<void>;
   updateStaff: (id: string, patch: Partial<Omit<Staff, "id" | "createdAt">>) => Promise<void>;
   deleteStaff: (id: string) => Promise<void>;
+  deleteStaffMembers: (ids: string[]) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -983,6 +998,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       await refreshData();
     },
+    deleteAdmins: async (ids) => {
+      if (!ids.length) return;
+      const targetIds = ids.filter((id) => id !== session?.id);
+      if (!targetIds.length) return;
+      const { error } = await supabase.from("admins").delete().in("id", targetIds);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
     addBranch: async (b) => {
       const { error } = await supabase.from("branches").insert([b]);
       if (error) throw new Error(error.message);
@@ -995,6 +1018,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteBranch: async (id) => {
       const { error } = await supabase.from("branches").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteBranches: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("branches").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1013,6 +1042,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteProduct: async (id) => {
       const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteProducts: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("products").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1193,6 +1228,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       await refreshData();
     },
+    deleteBills: async (ids) => {
+      if (session?.role !== "admin") {
+        throw new Error("Unauthorized: Only admins can delete bills.");
+      }
+      if (!ids.length) return;
+      const targetBills = state.bills.filter((b) => ids.includes(b.id));
+      const qtyMap: Record<string, number> = {};
+      for (const bill of targetBills) {
+        if (bill && bill.items) {
+          for (const item of bill.items) {
+            if (item.productId && !item.productId.startsWith("repair-item-")) {
+              qtyMap[item.productId] = (qtyMap[item.productId] || 0) + item.qty;
+            }
+          }
+        }
+      }
+      for (const [productId, qty] of Object.entries(qtyMap)) {
+        const product = state.products.find((p) => p.id === productId);
+        if (product) {
+          const { error: stockError } = await supabase
+            .from("products")
+            .update({ stock: product.stock + qty })
+            .eq("id", productId);
+          if (stockError) console.error("Stock restore failed", stockError);
+        }
+      }
+      const { error } = await supabase.from("bills").delete().in("id", ids);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
     addCustomer: async (c) => {
       const { data, error } = await supabase
         .from("customers")
@@ -1227,6 +1292,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteCustomer: async (id) => {
       const { error } = await supabase.from("customers").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteCustomers: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("customers").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1327,6 +1398,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       await refreshData();
     },
+    deleteRepairs: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("repairs").delete().in("id", ids);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
     addSupplier: async (s) => {
       const { error } = await supabase.from("suppliers").insert([supplierToDb(s)]);
       if (error) throw new Error(error.message);
@@ -1342,6 +1419,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       await refreshData();
     },
+    deleteSuppliers: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("suppliers").delete().in("id", ids);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
     addExpense: async (e) => {
       const { error } = await supabase.from("expenses").insert([expenseToDb(e)]);
       if (error) throw new Error(error.message);
@@ -1354,6 +1437,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteExpense: async (id) => {
       const { error } = await supabase.from("expenses").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteExpenses: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("expenses").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1405,6 +1494,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       await refreshData();
     },
+    deletePurchaseOrders: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("purchase_orders").delete().in("id", ids);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
     addReturn: async (r) => {
       const prefix = r.type === "Sale" ? "SR" : "PR";
       const maxNum = state.returns
@@ -1433,6 +1528,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       await refreshData();
     },
+    deleteReturns: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("returns").delete().in("id", ids);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
     addCategory: async (c) => {
       const { error } = await supabase.from("categories").insert([categoryToDb(c)]);
       if (error) throw new Error(error.message);
@@ -1445,6 +1546,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteCategory: async (id) => {
       const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteCategories: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("categories").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1463,6 +1570,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deletePaymentAccount: async (id) => {
       const { error } = await supabase.from("payment_accounts").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deletePaymentAccounts: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("payment_accounts").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1514,6 +1627,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (error) throw new Error(error.message);
       await refreshData();
     },
+    deleteAccountTransfers: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("account_transfers").delete().in("id", ids);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
     addBrand: async (b) => {
       const { error } = await supabase.from("brands").insert([brandToDb(b)]);
       if (error) throw new Error(error.message);
@@ -1526,6 +1645,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteBrand: async (id) => {
       const { error } = await supabase.from("brands").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteBrands: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("brands").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },
@@ -1560,6 +1685,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     deleteStaff: async (id) => {
       const { error } = await supabase.from("staff").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      await refreshData();
+    },
+    deleteStaffMembers: async (ids) => {
+      if (!ids.length) return;
+      const { error } = await supabase.from("staff").delete().in("id", ids);
       if (error) throw new Error(error.message);
       await refreshData();
     },

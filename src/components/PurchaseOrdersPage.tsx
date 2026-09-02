@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { ImageLightbox } from "./ImageLightbox";
 import { supabase } from "@/lib/supabase";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const emptyItem = (): PurchaseItem => ({
@@ -33,6 +35,7 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
     addPurchaseOrder,
     updatePurchaseOrder,
     deletePurchaseOrder,
+    deletePurchaseOrders,
   } = useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
@@ -43,6 +46,8 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
   const [editing, setEditing] = useState<PurchaseOrder | null>(null);
   const [query, setQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
     photos: string[];
@@ -58,6 +63,48 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
       }),
     [branchFilter, isAdmin, purchaseOrders, query, session?.branchId],
   );
+
+  const scopedIds = useMemo(() => scoped.map((po) => po.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((po) => selectedIds.includes(po.id));
+  const isSomeSelected = scoped.some((po) => selectedIds.includes(po.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} purchase order${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected purchase order${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deletePurchaseOrders(selectedIds);
+      toast.success(`${count} purchase order${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected purchase orders");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const closeDialog = () => {
     setOpen(false);
@@ -77,7 +124,7 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
               setEditing(null);
               setOpen(true);
             }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto cursor-pointer"
           >
             <Plus className="size-4" /> New Purchase Order
           </button>
@@ -108,10 +155,29 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
           {scoped.length} purchase orders
         </div>
       </div>
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="purchase orders"
+        className="mb-4"
+      />
+
       <div className="responsive-table rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
+              <th className="w-10 px-4 py-3 text-center">
+                <Checkbox
+                  checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all purchase orders"
+                />
+              </th>
               <th className="px-5 py-3 text-left font-medium">PO</th>
               <th className="px-5 py-3 text-left font-medium">Supplier</th>
               <th className="px-5 py-3 text-left font-medium">Purchase Date</th>
@@ -121,109 +187,122 @@ export function PurchaseOrdersPage({ mode }: { mode: "admin" | "branch" }) {
             </tr>
           </thead>
           <tbody>
-            {scoped.map((po) => (
-              <tr
-                key={po.id}
-                className="group border-b border-border/60 transition hover:bg-muted/50"
-              >
-                <td className="px-5 py-3">
-                  <div className="font-medium">{po.number}</div>
-                  <div className="text-xs text-muted-foreground">{po.items.length} items</div>
-                  {po.attachments && po.attachments.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {po.attachments.map((att, aIdx) => {
-                        const isUrl = att.startsWith("http");
-                        const isPdf = att.toLowerCase().includes(".pdf");
-                        return isUrl ? (
-                          isPdf ? (
-                            <a
-                              key={aIdx}
-                              href={att}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex size-6 items-center justify-center rounded border border-border bg-muted text-red-500 hover:bg-accent transition"
-                              title="View PDF attachment"
-                            >
-                              <FileText className="size-3.5" />
-                            </a>
+            {scoped.map((po) => {
+              const isSelected = selectedIds.includes(po.id);
+              return (
+                <tr
+                  key={po.id}
+                  className={`group border-b border-border/60 transition ${
+                    isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/50"
+                  }`}
+                >
+                  <td className="w-10 px-4 py-3 text-center">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(po.id)}
+                      aria-label={`Select ${po.number}`}
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="font-medium">{po.number}</div>
+                    <div className="text-xs text-muted-foreground">{po.items.length} items</div>
+                    {po.attachments && po.attachments.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {po.attachments.map((att, aIdx) => {
+                          const isUrl = att.startsWith("http");
+                          const isPdf = att.toLowerCase().includes(".pdf");
+                          return isUrl ? (
+                            isPdf ? (
+                              <a
+                                key={aIdx}
+                                href={att}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex size-6 items-center justify-center rounded border border-border bg-muted text-red-500 hover:bg-accent transition"
+                                title="View PDF attachment"
+                              >
+                                <FileText className="size-3.5" />
+                              </a>
+                            ) : (
+                              <button
+                                key={aIdx}
+                                type="button"
+                                onClick={() => {
+                                  const urls = po.attachments.filter(
+                                    (p) => p.startsWith("http") && !p.toLowerCase().includes(".pdf"),
+                                  );
+                                  const idx = urls.indexOf(att);
+                                  setLightbox({
+                                    isOpen: true,
+                                    photos: urls,
+                                    currentIndex: idx >= 0 ? idx : 0,
+                                  });
+                                }}
+                                className="size-6 rounded border border-border overflow-hidden bg-muted hover:opacity-80 transition cursor-pointer"
+                                title="Click to preview image"
+                              >
+                                <img src={att} alt="" className="size-full object-cover" />
+                              </button>
+                            )
                           ) : (
-                            <button
+                            <span
                               key={aIdx}
-                              type="button"
-                              onClick={() => {
-                                const urls = po.attachments.filter(
-                                  (p) => p.startsWith("http") && !p.toLowerCase().includes(".pdf"),
-                                );
-                                const idx = urls.indexOf(att);
-                                setLightbox({
-                                  isOpen: true,
-                                  photos: urls,
-                                  currentIndex: idx >= 0 ? idx : 0,
-                                });
-                              }}
-                              className="size-6 rounded border border-border overflow-hidden bg-muted hover:opacity-80 transition"
-                              title="Click to preview image"
+                              className="inline-flex h-6 items-center gap-0.5 rounded border border-border bg-muted px-1.5 text-[8px] font-mono text-muted-foreground"
+                              title={att}
                             >
-                              <img src={att} alt="" className="size-full object-cover" />
-                            </button>
-                          )
-                        ) : (
-                          <span
-                            key={aIdx}
-                            className="inline-flex h-6 items-center gap-0.5 rounded border border-border bg-muted px-1.5 text-[8px] font-mono text-muted-foreground"
-                            title={att}
-                          >
-                            📄 {att.slice(0, 8)}...
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </td>
-                <td className="px-5 py-3">{po.supplierName}</td>
-                <td className="px-5 py-3 num">{po.purchaseDate}</td>
-                <td className="px-5 py-3">{po.status}</td>
-                <td className="px-5 py-3 text-right num">{fmtMoney(po.grandTotal)}</td>
-                <td className="px-5 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(po);
-                      setOpen(true);
-                    }}
-                    className="rounded-md p-1.5 hover:bg-accent"
-                    aria-label="Edit purchase order"
-                  >
-                    <Pencil className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (
-                        !(await confirm({
-                          title: "Delete purchase order?",
-                          description: `Are you sure you want to delete purchase order ${po.number}?`,
-                        }))
-                      )
-                        return;
-                      try {
-                        await deletePurchaseOrder(po.id);
-                        toast.success("Purchase order deleted");
-                      } catch (e: any) {
-                        toast.error(e.message || "Failed to delete purchase order");
-                      }
-                    }}
-                    className="rounded-md p-1.5 text-destructive hover:bg-accent"
-                    aria-label="Delete purchase order"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                              📄 {att.slice(0, 8)}...
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-5 py-3">{po.supplierName}</td>
+                  <td className="px-5 py-3 num">{po.purchaseDate}</td>
+                  <td className="px-5 py-3">{po.status}</td>
+                  <td className="px-5 py-3 text-right num">{fmtMoney(po.grandTotal)}</td>
+                  <td className="px-5 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(po);
+                        setOpen(true);
+                      }}
+                      className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
+                      aria-label="Edit purchase order"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (
+                          !(await confirm({
+                            title: "Delete purchase order?",
+                            description: `Are you sure you want to delete purchase order ${po.number}?`,
+                          }))
+                        )
+                          return;
+                        try {
+                          await deletePurchaseOrder(po.id);
+                          toast.success("Purchase order deleted");
+                          setSelectedIds((prev) => prev.filter((id) => id !== po.id));
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to delete purchase order");
+                        }
+                      }}
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
+                      aria-label="Delete purchase order"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
             {scoped.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
                   No purchase orders yet.
                 </td>
               </tr>
@@ -312,6 +391,11 @@ function PurchaseDialog({
   const [shippingDetails, setShippingDetails] = useState(initial?.shippingDetails ?? "");
   const [charges, setCharges] = useState<PurchaseCharge[]>(initial?.additionalCharges ?? []);
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [dialogLightbox, setDialogLightbox] = useState<{
+    isOpen: boolean;
+    photos: string[];
+    currentIndex: number;
+  }>({ isOpen: false, photos: [], currentIndex: 0 });
   const branchSuppliers = suppliers.filter((s) => s.branchId === branchId);
   const branchProducts = products.filter((p) => p.branchId === branchId);
   const subtotal = items.reduce((sum, item) => sum + computeLine(item), 0);
@@ -586,11 +670,11 @@ function PurchaseDialog({
                                     (p) =>
                                       p.startsWith("http") && !p.toLowerCase().includes(".pdf"),
                                   );
-                                  const activeIndex = urls.indexOf(att);
-                                  setLightbox({
+                                  const idx = urls.indexOf(att);
+                                  setDialogLightbox({
                                     isOpen: true,
                                     photos: urls,
-                                    currentIndex: activeIndex >= 0 ? activeIndex : 0,
+                                    currentIndex: idx >= 0 ? idx : 0,
                                   });
                                 }}
                                 className="size-full object-cover"
@@ -748,6 +832,14 @@ function PurchaseDialog({
           </div>
         </form>
       </div>
+
+      <ImageLightbox
+        isOpen={dialogLightbox.isOpen}
+        photos={dialogLightbox.photos}
+        currentIndex={dialogLightbox.currentIndex}
+        onClose={() => setDialogLightbox((prev) => ({ ...prev, isOpen: false }))}
+        onChangeIndex={(idx) => setDialogLightbox((prev) => ({ ...prev, currentIndex: idx }))}
+      />
     </div>
   );
 }

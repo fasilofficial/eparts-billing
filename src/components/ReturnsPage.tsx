@@ -4,6 +4,8 @@ import { useStore, fmtMoney, type ReturnRecord } from "@/lib/store";
 import { RotateCcw, SlidersHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -24,7 +26,8 @@ export function ReturnsPage({
   mode: "admin" | "branch";
   type: "Sale" | "Purchase";
 }) {
-  const { session, branches, returns, addReturn, updateReturn, deleteReturn } = useStore();
+  const { session, branches, returns, addReturn, updateReturn, deleteReturn, deleteReturns } =
+    useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
   const defaultBranchId = isAdmin
@@ -38,6 +41,8 @@ export function ReturnsPage({
   const [filterOpen, setFilterOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ReturnRecord | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   const scoped = useMemo(
     () =>
@@ -52,6 +57,48 @@ export function ReturnsPage({
       }),
     [branchFilter, fromDate, isAdmin, query, returns, session?.branchId, status, toDate, type],
   );
+
+  const scopedIds = useMemo(() => scoped.map((r) => r.id), [scoped]);
+  const isAllSelected = scoped.length > 0 && scoped.every((r) => selectedIds.includes(r.id));
+  const isSomeSelected = scoped.some((r) => selectedIds.includes(r.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} return record${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected return record${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteReturns(selectedIds);
+      toast.success(`${count} return record${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected return records");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const title = type === "Sale" ? "Sale Returns" : "Purchase Returns";
   const partyLabel = type === "Sale" ? "Customer" : "Supplier";
@@ -72,7 +119,7 @@ export function ReturnsPage({
             <button
               type="button"
               onClick={() => setFilterOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-accent"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-accent cursor-pointer"
             >
               <SlidersHorizontal className="size-4 text-muted-foreground" />
               Filter
@@ -83,7 +130,7 @@ export function ReturnsPage({
                 setEditing(null);
                 setOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:opacity-90"
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:opacity-90 cursor-pointer"
             >
               <Plus className="size-4" />
               New Return
@@ -118,6 +165,17 @@ export function ReturnsPage({
         </div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scoped.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="returns"
+        className="mb-4"
+      />
+
       {scoped.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-5 py-16 text-center">
           <div className="mx-auto grid size-12 place-items-center rounded-full bg-accent/50 text-muted-foreground">
@@ -135,6 +193,13 @@ export function ReturnsPage({
           <table className="w-full text-sm">
             <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
               <tr className="border-b border-border bg-muted/20">
+                <th className="w-10 px-4 py-3.5 text-center">
+                  <Checkbox
+                    checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all returns"
+                  />
+                </th>
                 <th className="px-5 py-3.5 text-left font-semibold">Return #</th>
                 <th className="px-5 py-3.5 text-left font-semibold">{partyLabel}</th>
                 <th className="px-5 py-3.5 text-left font-semibold">Date</th>
@@ -144,56 +209,72 @@ export function ReturnsPage({
               </tr>
             </thead>
             <tbody>
-              {scoped.map((r) => (
-                <tr key={r.id} className="border-b border-border/60 transition hover:bg-muted/10">
-                  <td className="px-5 py-3.5 font-medium">{r.number}</td>
-                  <td className="px-5 py-3.5 font-medium text-foreground/80">{r.partyName}</td>
-                  <td className="px-5 py-3.5 text-muted-foreground num">{r.date}</td>
-                  <td className="px-5 py-3.5 text-right font-semibold num">{fmtMoney(r.amount)}</td>
-                  <td className="px-5 py-3.5">
-                    <span
-                      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${statusColors[r.status] || "bg-muted text-muted-foreground border-border"}`}
-                    >
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        onClick={() => {
-                          setEditing(r);
-                          setOpen(true);
-                        }}
-                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
-                        title="Edit return"
+              {scoped.map((r) => {
+                const isSelected = selectedIds.includes(r.id);
+                return (
+                  <tr
+                    key={r.id}
+                    className={`border-b border-border/60 transition ${
+                      isSelected ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-muted/10"
+                    }`}
+                  >
+                    <td className="w-10 px-4 py-3.5 text-center">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(r.id)}
+                        aria-label={`Select ${r.number}`}
+                      />
+                    </td>
+                    <td className="px-5 py-3.5 font-medium">{r.number}</td>
+                    <td className="px-5 py-3.5 font-medium text-foreground/80">{r.partyName}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground num">{r.date}</td>
+                    <td className="px-5 py-3.5 text-right font-semibold num">{fmtMoney(r.amount)}</td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${statusColors[r.status] || "bg-muted text-muted-foreground border-border"}`}
                       >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (
-                            !(await confirm({
-                              title: "Delete return record?",
-                              description: `Are you sure you want to delete return record ${r.number}?`,
-                            }))
-                          )
-                            return;
-                          try {
-                            await deleteReturn(r.id);
-                            toast.success("Return deleted");
-                          } catch (e: any) {
-                            toast.error(e.message || "Failed to delete return");
-                          }
-                        }}
-                        className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition"
-                        title="Delete return"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => {
+                            setEditing(r);
+                            setOpen(true);
+                          }}
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition cursor-pointer"
+                          title="Edit return"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (
+                              !(await confirm({
+                                title: "Delete return record?",
+                                description: `Are you sure you want to delete return record ${r.number}?`,
+                              }))
+                            )
+                              return;
+                            try {
+                              await deleteReturn(r.id);
+                              toast.success("Return deleted");
+                              setSelectedIds((prev) => prev.filter((id) => id !== r.id));
+                            } catch (e: any) {
+                              toast.error(e.message || "Failed to delete return");
+                            }
+                          }}
+                          className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition cursor-pointer"
+                          title="Delete return"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

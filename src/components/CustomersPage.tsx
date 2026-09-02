@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 const countryCodes = ["+91", "+1", "+44", "+971", "+61"];
 
@@ -24,7 +26,15 @@ const parsePhone = (value?: string) => {
 };
 
 export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
-  const { session, branches, customers, addCustomer, updateCustomer, deleteCustomer } = useStore();
+  const {
+    session,
+    branches,
+    customers,
+    addCustomer,
+    updateCustomer,
+    deleteCustomer,
+    deleteCustomers,
+  } = useStore();
   const confirm = useConfirm();
   const isAdmin = mode === "admin";
   const defaultBranchId = isAdmin
@@ -108,6 +118,53 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
     ],
   );
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
+  const scopedIds = useMemo(() => scopedCustomers.map((c) => c.id), [scopedCustomers]);
+  const isAllSelected =
+    scopedCustomers.length > 0 && scopedCustomers.every((c) => selectedIds.includes(c.id));
+  const isSomeSelected =
+    scopedCustomers.some((c) => selectedIds.includes(c.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !scopedIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...scopedIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} customer${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected customer${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteCustomers(selectedIds);
+      toast.success(`${count} customer${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected customers");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
+
   const exportRows = useMemo(
     () =>
       scopedCustomers.map((customer) => {
@@ -152,7 +209,7 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
                 setEditing(null);
                 setOpen(true);
               }}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto cursor-pointer"
             >
               <Plus className="size-4" /> Add customer
             </button>
@@ -191,22 +248,57 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
             ))}
           </select>
         )}
-        <div className="text-xs text-muted-foreground sm:ml-auto">
-          {scopedCustomers.length} customers
+
+        <div className="flex items-center gap-2 sm:ml-auto">
+          {scopedCustomers.length > 0 && (
+            <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+              <Checkbox
+                checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span>Select all</span>
+            </label>
+          )}
+          <div className="text-xs text-muted-foreground">
+            {scopedCustomers.length} customers
+          </div>
         </div>
       </div>
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={scopedCustomers.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(scopedIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="customers"
+        className="mb-4"
+      />
 
       <div className="grid gap-3">
         {scopedCustomers.map((customer) => {
           const branch = branches.find((b) => b.id === customer.branchId);
           const Icon = customer.isBusinessCustomer ? Building2 : UserRound;
+          const isSelected = selectedIds.includes(customer.id);
           return (
             <article
               key={customer.id}
-              className="rounded-xl border border-border bg-card p-5 shadow-soft"
+              className={`rounded-xl border bg-card p-5 shadow-soft transition ${
+                isSelected
+                  ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10"
+                  : "border-border hover:border-border/80"
+              }`}
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 gap-3">
+                <div className="flex min-w-0 gap-3 items-start">
+                  <div className="pt-2.5">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(customer.id)}
+                      aria-label={`Select ${customer.name}`}
+                    />
+                  </div>
                   <div className="grid size-10 shrink-0 place-items-center rounded-md bg-accent">
                     <Icon className="size-5" />
                   </div>
@@ -240,7 +332,7 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
                         setEditing(customer);
                         setOpen(true);
                       }}
-                      className="rounded-md p-1.5 hover:bg-accent"
+                      className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
                       aria-label={`Edit ${customer.name}`}
                       title="Edit customer"
                     >
@@ -259,11 +351,12 @@ export function CustomersPage({ mode }: { mode: "admin" | "branch" }) {
                         try {
                           await deleteCustomer(customer.id);
                           toast.success("Customer deleted");
+                          setSelectedIds((prev) => prev.filter((id) => id !== customer.id));
                         } catch (e: any) {
                           toast.error(e.message || "Failed to delete customer");
                         }
                       }}
-                      className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
                       aria-label={`Delete ${customer.name}`}
                       title="Delete customer"
                     >

@@ -1,18 +1,71 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore, fmtDate, type Admin } from "@/lib/store";
 import { PageHeader } from "@/components/DashboardLayout";
 import { Plus, Trash2, Pencil, X, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionBar } from "@/components/ui/BulkActionBar";
 
 export const Route = createFileRoute("/admin/administrators")({ component: AdminAdministrators });
 
 function AdminAdministrators() {
-  const { admins, session, addAdmin, updateAdmin, deleteAdmin } = useStore();
+  const { admins, session, addAdmin, updateAdmin, deleteAdmin, deleteAdmins } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Admin | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const confirm = useConfirm();
+
+  const selectableAdmins = useMemo(
+    () => admins.filter((a) => session?.email !== a.email && session?.id !== a.id),
+    [admins, session?.email, session?.id],
+  );
+  const selectableIds = useMemo(() => selectableAdmins.map((a) => a.id), [selectableAdmins]);
+
+  const isAllSelected =
+    selectableAdmins.length > 0 && selectableAdmins.every((a) => selectedIds.includes(a.id));
+  const isSomeSelected =
+    selectableAdmins.some((a) => selectedIds.includes(a.id)) && !isAllSelected;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !selectableIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...selectableIds])));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    if (
+      !(await confirm({
+        title: `Delete ${count} administrator${count > 1 ? "s" : ""}?`,
+        description: `Are you sure you want to delete ${count} selected administrator${count > 1 ? "s" : ""}? This action cannot be undone.`,
+      }))
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeletingBulk(true);
+      await deleteAdmins(selectedIds);
+      toast.success(`${count} administrator${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete selected administrators");
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   return (
     <>
@@ -26,11 +79,37 @@ function AdminAdministrators() {
               setEditing(null);
               setOpen(true);
             }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper hover:opacity-90 sm:w-auto cursor-pointer"
           >
             <Plus className="size-4" /> New administrator
           </button>
         }
+      />
+
+      <div className="mb-4 flex items-center justify-between">
+        {selectableAdmins.length > 0 && (
+          <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+            <Checkbox
+              checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
+              onCheckedChange={toggleSelectAll}
+            />
+            <span>Select all</span>
+          </label>
+        )}
+        <div className="text-xs text-muted-foreground ml-auto">
+          {admins.length} administrators
+        </div>
+      </div>
+
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={selectableAdmins.length}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={() => setSelectedIds(selectableIds)}
+        onDelete={handleBulkDelete}
+        isDeleting={isDeletingBulk}
+        entityLabel="administrators"
+        className="mb-4"
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -66,15 +145,31 @@ function AdminAdministrators() {
 
         {admins.map((admin) => {
           const isSelf = session?.email === admin.email;
+          const isSelected = selectedIds.includes(admin.id);
           return (
             <article
               key={admin.id}
-              className="group rounded-xl border border-border bg-card p-5 transition hover:shadow-soft"
+              className={`group rounded-xl border bg-card p-5 transition shadow-sm ${
+                isSelected
+                  ? "border-primary/50 ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10"
+                  : "border-border hover:shadow-soft"
+              }`}
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-display text-2xl leading-tight">{admin.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{admin.email}</div>
+                <div className="flex items-start gap-3">
+                  {!isSelf && (
+                    <div className="pt-1">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(admin.id)}
+                        aria-label={`Select ${admin.name}`}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-display text-2xl leading-tight">{admin.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{admin.email}</div>
+                  </div>
                 </div>
                 <div className="flex gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                   <button
@@ -82,7 +177,7 @@ function AdminAdministrators() {
                       setEditing(admin);
                       setOpen(true);
                     }}
-                    className="rounded-md p-1.5 hover:bg-accent"
+                    className="rounded-md p-1.5 hover:bg-accent cursor-pointer"
                     aria-label={`Edit ${admin.name}`}
                     title="Edit administrator"
                   >
@@ -104,12 +199,13 @@ function AdminAdministrators() {
                           try {
                             await deleteAdmin(admin.id);
                             toast.success("Administrator removed");
+                            setSelectedIds((prev) => prev.filter((id) => id !== admin.id));
                           } catch (e: any) {
                             toast.error(e.message || "Failed to delete administrator");
                           }
                         }
                       }}
-                      className="rounded-md p-1.5 text-destructive hover:bg-accent"
+                      className="rounded-md p-1.5 text-destructive hover:bg-accent cursor-pointer"
                       aria-label={`Delete ${admin.name}`}
                       title="Delete administrator"
                     >

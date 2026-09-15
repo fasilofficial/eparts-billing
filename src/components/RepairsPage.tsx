@@ -28,6 +28,29 @@ const defaultIssues = [
   "Other",
 ];
 
+const repairStatusList = [
+  "Open",
+  "In Progress",
+  "Waiting for Parts",
+  "Ready",
+  "Delivered",
+  "Cancelled",
+];
+
+const itemStatusColors: Record<string, string> = {
+  Open: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900/50",
+  "In Progress":
+    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
+  "Waiting for Parts":
+    "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/50",
+  Ready:
+    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
+  Delivered:
+    "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800/50",
+  Cancelled:
+    "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50",
+};
+
 type DraftItem = RepairItem & { draftIssue: string; newFiles?: File[] };
 type RepairFormData = {
   branchId: string;
@@ -51,6 +74,7 @@ const emptyItem = (): DraftItem => ({
   serviceCost: undefined,
   assignedTo: "Unassigned",
   expectedCompletionDate: "",
+  status: "Open",
   draftIssue: "",
 });
 
@@ -174,7 +198,13 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
       repairs.filter((repair) => {
         if (!isAdmin && repair.branchId !== session?.branchId) return false;
         if (isAdmin && branchFilter !== "all" && repair.branchId !== branchFilter) return false;
-        if (statusFilter !== "all" && repair.status !== statusFilter) return false;
+        if (statusFilter !== "all") {
+          const ticketMatches = repair.status === statusFilter;
+          const itemMatches = repair.items.some(
+            (item) => (item.status || "Open") === statusFilter,
+          );
+          if (!ticketMatches && !itemMatches) return false;
+        }
         if (customerFilter !== "all" && repair.customerName !== customerFilter) return false;
 
         if (modelFilter !== "all") {
@@ -577,9 +607,19 @@ export function RepairsPage({ mode }: { mode: "admin" | "branch" }) {
                     className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium">
-                        {item.brand} {item.item} x{item.quantity}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">
+                          {item.brand} {item.item} x{item.quantity}
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold border ${
+                            itemStatusColors[item.status || "Open"] ||
+                            "bg-muted text-muted-foreground border-border"
+                          }`}
+                        >
+                          {item.status || "Open"}
+                        </span>
+                      </div>
                       <span className="text-xs text-muted-foreground">{item.assignedTo}</span>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
@@ -758,7 +798,7 @@ function RepairDialog({
   );
   const [items, setItems] = useState<DraftItem[]>(
     initial?.items.length
-      ? initial.items.map((item) => ({ ...item, draftIssue: "" }))
+      ? initial.items.map((item) => ({ ...item, status: item.status || "Open", draftIssue: "" }))
       : [emptyItem()],
   );
   const [uploading, setUploading] = useState(false);
@@ -843,6 +883,7 @@ function RepairDialog({
             quantity: Number(item.quantity) || 1,
             partsCost: item.partsCost == null ? undefined : Number(item.partsCost),
             serviceCost: item.serviceCost == null ? undefined : Number(item.serviceCost),
+            status: item.status || "Open",
             issues: item.issues.filter(Boolean),
             photos,
           };
@@ -1085,17 +1126,37 @@ function RepairDialog({
                         )}
                     </select>
                   </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Status
+                    </span>
+                    <select
+                      value={item.status || "Open"}
+                      onChange={(e) => updateItem(index, { status: e.target.value })}
+                      className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+                    >
+                      {repairStatusList.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <Field
                     label="Expected completion"
                     type="date"
                     value={item.expectedCompletionDate ?? ""}
                     onChange={(value) => updateItem(index, { expectedCompletionDate: value })}
                   />
-                  <label className="flex items-center gap-2 self-end rounded-md border border-border bg-card px-3 py-2 text-sm">
+                </div>
+
+                <div className="mt-3 flex items-center">
+                  <label className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm cursor-pointer hover:bg-accent/40 transition">
                     <input
                       type="checkbox"
                       checked={item.underWarranty}
                       onChange={(e) => updateItem(index, { underWarranty: e.target.checked })}
+                      className="size-4 rounded border-border"
                     />
                     Under warranty
                   </label>

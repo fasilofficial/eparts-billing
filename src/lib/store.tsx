@@ -257,6 +257,7 @@ export interface RepairItem {
   assignedTo: string;
   assignedToId?: string;
   expectedCompletionDate?: string;
+  status?: string;
 }
 
 export interface Repair {
@@ -432,6 +433,7 @@ const repairItemsToDb = (repairId: string, items: RepairItem[], includePartsCost
       assigned_to: item.assignedTo || "Unassigned",
       assigned_to_id: item.assignedToId || null,
       expected_completion_date: item.expectedCompletionDate || null,
+      status: item.status || "Open",
     };
     if (includePartsCost) {
       obj.parts_cost = item.partsCost ?? 0;
@@ -740,6 +742,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           assignedTo: i.assigned_to ?? "Unassigned",
           assignedToId: i.assigned_to_id ?? undefined,
           expectedCompletionDate: i.expected_completion_date ?? undefined,
+          status: i.status || "Open",
         })),
       }));
 

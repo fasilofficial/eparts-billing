@@ -185,18 +185,33 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     }
   };
 
-  const handleStatusChange = async (repair: Repair, newStatus: string) => {
+  const handleItemStatusChange = async (
+    repair: Repair,
+    targetItem: RepairItem,
+    newStatus: string,
+  ) => {
     try {
+      const updatedItems = repair.items.map((it) => {
+        const isMatch =
+          it.id && targetItem.id
+            ? it.id === targetItem.id
+            : it === targetItem ||
+              (it.brand === targetItem.brand &&
+                it.item === targetItem.item &&
+                it.serialNumber === targetItem.serialNumber);
+        return isMatch ? { ...it, status: newStatus } : it;
+      });
       await updateRepair(repair.id, {
         branchId: repair.branchId,
         customerId: repair.customerId,
         customerName: repair.customerName,
-        status: newStatus,
-        items: repair.items,
+        status: repair.status,
+        entryDate: repair.entryDate,
+        items: updatedItems,
       });
-      toast.success(`Repair ${repair.number} status updated to ${newStatus}`);
+      toast.success(`${targetItem.brand} ${targetItem.item} status updated to ${newStatus}`);
     } catch (e: any) {
-      toast.error(e.message || "Failed to update status");
+      toast.error(e.message || "Failed to update item status");
     }
   };
 
@@ -208,6 +223,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     "Repair Number",
     "Customer Name",
     "Assigned Item",
+    "Item Status",
     "Issues",
     "Due Date",
     "Repair Status",
@@ -230,6 +246,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
           "-",
           "-",
           "-",
+          "-",
         ]);
       } else {
         workload.forEach(({ repair, item }) => {
@@ -241,8 +258,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
             repair.number,
             repair.customerName,
             `${item.brand} ${item.item}`,
-            item.issues || "-",
-            item.dueDate || "-",
+            item.status || "Open",
+            item.issues?.join(", ") || "-",
+            item.expectedCompletionDate || "-",
             repair.status,
           ]);
         });
@@ -349,7 +367,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
           const branch = branches.find((b) => b.id === s.branchId);
           const workload = getStaffWorkload(s.id);
           const activeWorkload = workload.filter(
-            (w) => w.repair.status !== "Delivered" && w.repair.status !== "Cancelled",
+            (w) =>
+              (w.item.status || w.repair.status) !== "Delivered" &&
+              (w.item.status || w.repair.status) !== "Cancelled",
           );
           const isExpanded = !!expandedStaff[s.id];
           const isSelected = selectedIds.includes(s.id);
@@ -528,11 +548,11 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
 
                         <div className="flex items-center gap-2">
                           <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                            Status:
+                            Item Status:
                           </span>
                           <select
-                            value={repair.status}
-                            onChange={(e) => handleStatusChange(repair, e.target.value)}
+                            value={item.status || "Open"}
+                            onChange={(e) => handleItemStatusChange(repair, item, e.target.value)}
                             className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-semibold outline-none focus:border-ink"
                           >
                             <option>Open</option>

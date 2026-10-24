@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/DashboardLayout";
-import { useStore, type Staff, type Repair, type RepairItem } from "@/lib/store";
+import { useStore, fmtDate, type Staff, type Repair, type RepairItem } from "@/lib/store";
 import {
   Plus,
   Pencil,
@@ -12,6 +12,7 @@ import {
   Mail,
   Award,
   Landmark,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmProvider";
@@ -62,6 +63,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
   const [branchFilter, setBranchFilter] = useState(isAdmin ? "all" : defaultBranchId);
   const [statusFilter, setStatusFilter] = useState("all");
   const [staffFilter, setStaffFilter] = useState("all");
+  const [datePeriod, setDatePeriod] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [expandedStaff, setExpandedStaff] = useState<Record<string, boolean>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
@@ -74,6 +78,67 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     photos: [],
     currentIndex: 0,
   });
+
+  const getPeriodDates = (period: string) => {
+    const now = new Date();
+    const format = (d: Date) => d.toLocaleDateString("sv-SE");
+    switch (period) {
+      case "today":
+        return { from: format(now), to: format(now) };
+      case "yesterday": {
+        const y = new Date(now);
+        y.setDate(y.getDate() - 1);
+        return { from: format(y), to: format(y) };
+      }
+      case "week": {
+        const start = new Date(now);
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+        start.setDate(diff);
+        return { from: format(start), to: format(now) };
+      }
+      case "month": {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { from: format(start), to: format(now) };
+      }
+      case "year": {
+        const start = new Date(now.getFullYear(), 0, 1);
+        return { from: format(start), to: format(now) };
+      }
+      default:
+        return { from: "", to: "" };
+    }
+  };
+
+  const applyDatePeriod = (period: string) => {
+    setDatePeriod(period);
+    if (period === "all") {
+      setDateFrom("");
+      setDateTo("");
+    } else if (period === "custom") {
+      // Keep existing custom dates
+    } else {
+      const { from, to } = getPeriodDates(period);
+      setDateFrom(from);
+      setDateTo(to);
+    }
+  };
+
+  const isInDateRange = (dateStr?: string, from?: string, to?: string) => {
+    if (!dateStr) return false;
+    const cleanDateStr = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr + "T12:00:00" : dateStr;
+    const d = new Date(cleanDateStr);
+    if (isNaN(d.getTime())) return false;
+    if (from) {
+      const fromD = new Date(from + "T00:00:00");
+      if (d.getTime() < fromD.getTime()) return false;
+    }
+    if (to) {
+      const toD = new Date(to + "T23:59:59.999");
+      if (d.getTime() > toD.getTime()) return false;
+    }
+    return true;
+  };
 
   const staffOptions = useMemo(() => {
     return staff.filter((s) => {
@@ -97,12 +162,20 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     setExpandedStaff((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Helper to get workload (repair items assigned to a staff)
+  // Helper to get workload (repair items assigned to a staff) based on assigned task date
   const getStaffWorkload = (staffId: string) => {
+    const targetStaff = staff.find((s) => s.id === staffId);
     const workload: { repair: Repair; item: RepairItem }[] = [];
     repairs.forEach((repair) => {
+      const assignedDate = repair.entryDate || repair.createdAt;
+      if ((dateFrom || dateTo) && !isInDateRange(assignedDate, dateFrom, dateTo)) {
+        return;
+      }
       repair.items.forEach((item) => {
-        if (item.assignedToId === staffId) {
+        const isAssigned =
+          item.assignedToId === staffId ||
+          (!item.assignedToId && targetStaff && item.assignedTo === targetStaff.name);
+        if (isAssigned) {
           workload.push({ repair, item });
         }
       });
@@ -225,6 +298,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
     "Assigned Item",
     "Item Status",
     "Issues",
+    "Assigned Date",
     "Due Date",
     "Repair Status",
   ];
@@ -247,6 +321,7 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
           "-",
           "-",
           "-",
+          "-",
         ]);
       } else {
         workload.forEach(({ repair, item }) => {
@@ -260,14 +335,15 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
             `${item.brand} ${item.item}`,
             item.status || "Open",
             item.issues?.join(", ") || "-",
-            item.expectedCompletionDate || "-",
+            fmtDate(repair.entryDate || repair.createdAt),
+            item.expectedCompletionDate ? fmtDate(item.expectedCompletionDate) : "-",
             repair.status,
           ]);
         });
       }
     });
     return rows;
-  }, [filteredStaff, branches, repairs]);
+  }, [filteredStaff, branches, repairs, dateFrom, dateTo, staff]);
 
   return (
     <>
@@ -335,6 +411,50 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
             </option>
           ))}
         </select>
+
+        <select
+          value={datePeriod}
+          onChange={(e) => applyDatePeriod(e.target.value)}
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+        >
+          <option value="all">All assigned dates</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="year">This Year</option>
+          <option value="custom">Custom Range</option>
+        </select>
+
+        {datePeriod === "custom" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+            />
+            <span className="text-muted-foreground text-xs">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-ink"
+            />
+          </div>
+        )}
+
+        {datePeriod !== "all" && (
+          <button
+            type="button"
+            onClick={() => applyDatePeriod("all")}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition cursor-pointer"
+            title="Reset date filter"
+          >
+            <X className="size-3.5" />
+            Clear date
+          </button>
+        )}
         <div className="flex items-center gap-2 sm:ml-auto">
           {filteredStaff.length > 0 && (
             <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
@@ -436,6 +556,11 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                     <div className="num text-lg font-bold">
                       {activeWorkload.length} task{activeWorkload.length !== 1 && "s"}
                     </div>
+                    {datePeriod !== "all" && (
+                      <div className="text-[11px] text-muted-foreground">
+                        {workload.length} total in period
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-1 ml-auto">
                     <button
@@ -472,7 +597,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                     <Award className="size-4" />
                     {isExpanded
                       ? "Hide Assigned Tasks"
-                      : `View Assigned Tasks (${workload.length})`}
+                      : datePeriod !== "all"
+                        ? `View Assigned Tasks (${workload.length} in period)`
+                        : `View Assigned Tasks (${workload.length})`}
                   </span>
                   {isExpanded ? (
                     <ChevronUp className="size-4" />
@@ -500,8 +627,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground pt-1">
                             <span>Issues: {item.issues.join(", ")}</span>
+                            <span>· Assigned: {fmtDate(repair.entryDate || repair.createdAt)}</span>
                             {item.expectedCompletionDate && (
-                              <span>· Due: {item.expectedCompletionDate}</span>
+                              <span>· Due: {fmtDate(item.expectedCompletionDate)}</span>
                             )}
                           </div>
                           {item.photos && item.photos.length > 0 && (
@@ -567,7 +695,9 @@ export function StaffPage({ mode }: { mode: "admin" | "branch" }) {
                     ))}
                     {workload.length === 0 && (
                       <div className="text-xs text-muted-foreground py-4 text-center border border-dashed border-border rounded-lg bg-background">
-                        No tasks assigned to this staff member.
+                        {datePeriod !== "all"
+                          ? "No tasks assigned to this staff member in the selected date range."
+                          : "No tasks assigned to this staff member."}
                       </div>
                     )}
                   </div>
